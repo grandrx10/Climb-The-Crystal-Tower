@@ -139,6 +139,9 @@ namespace TwoCT.Bullets
             if (arena != null) arena.SetLassoOffset(offset);
         }
 
+        /// <summary>Clamp a point inside the defend box (crosshair explosions spawn within the battlefield).</summary>
+        public Vector2 ClampToArena(Vector2 p) => arena != null ? arena.Clamp(p) : p;
+
         private void Update()
         {
             if (!_running) return;

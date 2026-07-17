@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2f90aba756ad7742954a577aae76f14, type: 3}
+  m_Name: Boss_Ryomi
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BossData
+  bossName: Ryomi
+  sprite: {fileID: 0}
+  flipX: 0
+  flipY: 0
+  maxHP: 150
+  introLines:
+  - speaker: Ryomi
+    text: "Winter's bounty is mine \u2014 y'all just picked the wrong hill."
+    autoAdvanceSeconds: 3
+    actions: []
+  - speaker: Ryomi
+    text: Draw.
+    autoAdvanceSeconds: 1.5
+    actions: []
+  defeatLines:
+  - speaker: Ryomi
+    text: Heh... reckon that bounty'll have to wait.
+    autoAdvanceSeconds: 3
+    actions: []
+  phases:
+  - phaseName: Phase 1
+    enterAtHealthFraction: 1
+    attackRotation:
+    - {fileID: 11400000, guid: 3c5e5fae7f7392e4193f02d24a5691bb, type: 2}
+    - {fileID: 11400000, guid: 27c8e8f4c6013df47a000e7bde6c8e27, type: 2}
+    - {fileID: 11400000, guid: d739c924ab9c5f04fab91c0a1130752e, type: 2}
+    - {fileID: 11400000, guid: 4e348d8bb1f77e24690a7395c86dc31f, type: 2}
+    transitionLines: []
+  - phaseName: Phase 2
+    enterAtHealthFraction: 0.4
+    attackRotation:
+    - {fileID: 11400000, guid: 453dca35b9bfa3d4b960a0317d018d68, type: 2}
+    transitionLines:
+    - speaker: Ryomi
+      text: Now yer roped in.
+      autoAdvanceSeconds: 1.5
+      actions: []
+  references:
+    version: 2
+    RefIds: []

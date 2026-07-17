@@ -116,6 +116,9 @@ namespace TwoCT.Core
         public float telegraphDuration;   // MarkedStrike: crosshair fade-in before the slash (0 = slash now)
         public float crossArmLength;      // half-length of each bar (reach of the slash)
         public float crossThickness;      // full bar thickness once grown
+        public float crosshairSize;       // diameter of the small crosshair telegraph marker
+        public Sprite crosshairSprite;    // the crosshair marker's normal art (null = placeholder circle)
+        public Sprite windupSprite;       // TrackingCut: art shown during the pre-shot windup (null = flash white)
         public float fadeDuration;        // seconds the bars fade out after the hold
         public float spawnRadius;         // MarkedStrike: crosshair appears within this of the target
         public float spawnAngle;          // deterministic offset angle (rad) within spawnRadius
@@ -128,11 +131,13 @@ namespace TwoCT.Core
         public float spinSpeedDeg;        // crosshair spin (deg/sec)
         public float homingAccel;         // acceleration toward the target (units/sec^2)
         public float homingMaxSpeed;      // max homing speed (units/sec)
+        public float windupDuration;      // TrackingCut: pause (frozen + white) before each detonation
 
         // Sliding Cut / Lasso ------------------------------------------------
-        public float afterImageInterval;  // seconds between afterimage drops (SlidingCut)
+        public float afterImageInterval;  // seconds between afterimage drops (SlidingCut / Ricochet trail)
         public float lassoSpeed;          // arena drag speed (units/sec)
         public float lassoRange;          // how far up/down the arena drags from centre
+        public float lassoRopeWidth;      // width of the visible lasso ropes (0 = invisible)
     }
 
     /// <summary>

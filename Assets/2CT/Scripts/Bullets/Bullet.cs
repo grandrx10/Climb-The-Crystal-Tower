@@ -39,10 +39,14 @@ namespace TwoCT.Bullets
 
         // ---- Ryomi (boss 2) runtime state ----------------------------------
         private SpriteRenderer _barH, _barV;   // cross-slash bar visuals (children; local axes, parent rotates)
+        private SpriteRenderer _crosshair;     // small telegraph marker (child; not the long bars)
+        private SpriteRenderer _ropeTop, _ropeBottom;   // Lasso: visible ropes from screen edges to the box
         private float _crossThickness;         // current bar thickness (grows 0→crossThickness)
         private Vector2 _homingVel;            // TrackingCut homing velocity
         private float _fillClock;              // TrackingCut: progress toward the next detonation
         private float _fillDur;                // TrackingCut: current fill duration (shrinks each cycle)
+        private bool _winding;                 // TrackingCut: in the pre-shot windup (frozen + white)?
+        private float _windupClock;            // TrackingCut: time spent in the windup
         private float _afterTimer;             // SlidingCut: time since the last afterimage drop
 
         // One child a bullet can ask the system to spawn this frame (TrackingCut detonation cross,
@@ -81,31 +85,45 @@ namespace TwoCT.Bullets
             _homingVel = Vector2.zero;
             _fillClock = 0f;
             _fillDur = Mathf.Max(0.05f, data.fillDuration);
+            _winding = false;
+            _windupClock = 0f;
             _afterTimer = 0f;
             _pendingChild = false;
             if (_barH != null) _barH.gameObject.SetActive(false);
             if (_barV != null) _barV.gameObject.SetActive(false);
+            if (_crosshair != null) _crosshair.gameObject.SetActive(false);
 
             // Orientation: explosions spin randomly (purely visual, circle hitbox); Box/Cross slashes
             // use their authored rotation; everything else stays upright (also clears pooled spin).
             if (data.behavior == BulletBehavior.Explosion)
                 transform.rotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
-            else if (data.hitShape == BulletHitShape.Box || data.hitShape == BulletHitShape.Cross)
-                transform.rotation = Quaternion.Euler(0f, 0f, data.rotationDeg);
+            else if (data.hitShape == BulletHitShape.Box || data.hitShape == BulletHitShape.Cross
+                     || data.behavior == BulletBehavior.AfterImage)
+                transform.rotation = Quaternion.Euler(0f, 0f, data.rotationDeg);   // slashes + trail keep their facing
             else
                 transform.rotation = Quaternion.identity;
             if (_sr != null)
             {
                 // Real art shows its own colours (rendered white, tint only carries alpha for fades);
-                // the placeholder circle uses the flat `color`. Either way SetAlpha drives the fade.
-                _sr.sprite = data.sprite != null ? data.sprite : _defaultSprite;
+                // the placeholder uses the flat `color`. Box slashes fall back to a SQUARE (not the
+                // circle) so an untextured Cut renders as a rectangle rather than an ellipse.
+                Sprite fallback = data.hitShape == BulletHitShape.Box ? PlayerDodgeIcon.MakeSquareSprite() : _defaultSprite;
+                _sr.sprite = data.sprite != null ? data.sprite : fallback;
                 _sr.color = data.sprite != null ? Color.white : data.color;
                 _sr.enabled = true;
             }
-            // Circle bullets size the sprite to their radius. Box/Cross/None (Ryomi slashes, crosshairs,
-            // afterimages, lasso) keep the transform at scale 1 and size their sprite/bars in Tick.
+            // Cross slashes + crosshairs draw via dedicated children (bars / crosshair marker), NOT the
+            // main sprite — so the placeholder circle never flashes alongside the rectangular slash.
+            if (_sr != null && (data.behavior == BulletBehavior.MarkedStrike || data.behavior == BulletBehavior.SlashCross
+                || data.behavior == BulletBehavior.TrackingCut || data.behavior == BulletBehavior.Lasso))
+                _sr.enabled = false;
+            // Circle bullets size the sprite to their radius. Box bullets size to their extents NOW (not
+            // in the first Tick) so they don't flash as a 1×1 square for one frame. Cross/None keep
+            // scale 1 (bars/crosshair children size themselves).
             if (data.hitShape == BulletHitShape.Circle)
                 ApplyVisual(data.behavior == BulletBehavior.GrowExplode || data.behavior == BulletBehavior.Explosion ? 0f : data.radius);
+            else if (data.hitShape == BulletHitShape.Box)
+                ApplyBoxVisual(1f);
             else
                 transform.localScale = Vector3.one;
             if (data.behavior == BulletBehavior.Lasso && _sr != null) _sr.enabled = false;   // invisible controller
@@ -119,6 +137,9 @@ namespace TwoCT.Bullets
             if (_sr != null) _sr.enabled = false;
             if (_barH != null) _barH.gameObject.SetActive(false);
             if (_barV != null) _barV.gameObject.SetActive(false);
+            if (_crosshair != null) _crosshair.gameObject.SetActive(false);
+            if (_ropeTop != null) _ropeTop.gameObject.SetActive(false);
+            if (_ropeBottom != null) _ropeBottom.gameObject.SetActive(false);
             if (_hitbox != null && _hitbox.gameObject.activeSelf) _hitbox.gameObject.SetActive(false);
             _pendingChild = false;
             gameObject.SetActive(false);
@@ -249,16 +270,17 @@ namespace TwoCT.Bullets
 
         // ---- Ryomi (boss 2) behaviours -------------------------------------
 
-        // Marked Strike: crosshair fades in (telegraph, harmless) at its frozen spot, then slashes a cross.
+        // Marked Strike: a small crosshair fades in (telegraph, harmless) at its frozen spot INSIDE the
+        // battlefield, then it's replaced by the long cross slash.
         private bool TickMarkedStrike(float dt, BulletSystem sys)
         {
             if (!_launched)
             {
-                // Freeze the crosshair near the target: its live position at spawn + the authored offset.
+                // Freeze the crosshair near the target (spawn position + offset), clamped into the box.
                 _launched = true;
                 Vector2 tp = sys.ResolveTargetPosition(Data.targetSelect, transform.position);
                 Vector2 off = new Vector2(Mathf.Cos(Data.spawnAngle), Mathf.Sin(Data.spawnAngle)) * Data.spawnDist;
-                transform.position = tp + off;
+                transform.position = sys.ClampToArena(tp + off);
             }
             if (Age < Data.telegraphDuration)
             {
@@ -267,9 +289,10 @@ namespace TwoCT.Bullets
                 if (_barH != null) _barH.gameObject.SetActive(false);
                 if (_barV != null) _barV.gameObject.SetActive(false);
                 float p = Data.telegraphDuration > 0f ? Age / Data.telegraphDuration : 1f;
-                SetAlpha(0.15f + 0.55f * Mathf.Clamp01(p));   // crosshair fades in
+                ShowCrosshair(0.2f + 0.6f * Mathf.Clamp01(p));   // small marker fades in
                 return true;
             }
+            HideCrosshair();                                     // the slash replaces the crosshair
             return TickSlashCross(dt, Age - Data.telegraphDuration);
         }
 
@@ -309,8 +332,8 @@ namespace TwoCT.Bullets
                 _afterTimer = 0f;
                 var ai = Data;
                 ai.behavior = BulletBehavior.AfterImage;
-                ai.damage = 0;
-                ai.hitShape = BulletHitShape.None;
+                ai.damage = 0;                          // harmless (Box + 0 damage = never hit-tested)
+                ai.hitShape = BulletHitShape.Box;       // render as the same RECTANGLE, not a circle
                 ai.velocity = Vector2.zero;
                 ai.lifetime = Mathf.Max(0.15f, Data.afterImageInterval * 3f);
                 RequestChild(ai, transform.position);
@@ -323,21 +346,17 @@ namespace TwoCT.Bullets
         private bool TickAfterImage(float dt)
         {
             CurrentDamage = 0;
-            ApplyBoxVisual(Mathf.Clamp01(1f - Age / Mathf.Max(0.0001f, Data.lifetime)));   // fade behind the cut
+            float a = Mathf.Clamp01(1f - Age / Mathf.Max(0.0001f, Data.lifetime));   // fade out
+            if (Data.boxHalfExtents.x > 0f || Data.boxHalfExtents.y > 0f)
+                ApplyBoxVisual(a);                       // Cut trail: rectangle
+            else { ApplyVisual(Data.radius); SetAlpha(a); }   // Ricochet trail: circle
             return Age < Data.lifetime;
         }
 
-        // Ricochet: linear, reflecting off the arena walls; expires after its lifetime.
+        // Ricochet: linear (velocity aimed at a random battlefield point by the emitter), reflecting off
+        // the arena walls; expires after its lifetime.
         private bool TickRicochet(float dt, BulletSystem sys)
         {
-            if (!_launched)
-            {
-                // Aim at a random player at spawn (then it just bounces).
-                _launched = true;
-                Vector2 t = sys.ResolveTargetPosition(Data.targetSelect, transform.position);
-                Vector2 dir = t - (Vector2)transform.position;
-                Data.velocity = (dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector2.left) * Data.speed;
-            }
             Vector2 v = Data.velocity;
             Vector2 p = (Vector2)transform.position + v * dt;
             Rect b = sys.ArenaBounds;
@@ -348,7 +367,26 @@ namespace TwoCT.Bullets
             else if (p.y + r > b.yMax && v.y > 0) { p.y = b.yMax - r; v.y = -v.y; }
             Data.velocity = v;
             transform.position = p;
+            // Face the travel direction (visual only — the circle hitbox is rotation-invariant).
+            if (v.sqrMagnitude > 0.0001f)
+                transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg);
             CurrentDamage = Data.damage;
+
+            // Short afterimage trail behind the bullet.
+            _afterTimer += dt;
+            if (Data.afterImageInterval > 0f && _afterTimer >= Data.afterImageInterval)
+            {
+                _afterTimer = 0f;
+                var ai = Data;
+                ai.behavior = BulletBehavior.AfterImage;
+                ai.damage = 0;
+                ai.hitShape = BulletHitShape.Circle;   // circle trail (matches the bullet)
+                ai.boxHalfExtents = Vector2.zero;
+                ai.velocity = Vector2.zero;
+                ai.rotationDeg = transform.eulerAngles.z;   // trail faces the same way
+                ai.lifetime = Mathf.Max(0.1f, Data.afterImageInterval * 4f);
+                RequestChild(ai, transform.position);
+            }
             return Age < Data.lifetime;
         }
 
@@ -358,6 +396,28 @@ namespace TwoCT.Bullets
         {
             CurrentDamage = 0;   // harmless; the detonated cross is the hazard
 
+            if (_winding)
+            {
+                // Pre-shot: freeze in place, crosshair goes solid white, THEN detonate + resume.
+                _windupClock += dt;
+                ShowCrosshair(1f, windup: true);
+                if (_windupClock >= Mathf.Max(0f, Data.windupDuration))
+                {
+                    _winding = false;
+                    _windupClock = 0f;
+                    _fillClock = 0f;
+                    _fillDur = Mathf.Max(Data.fillFloor, _fillDur - Data.fillSpeedup);   // faster each cycle
+                    var cross = Data;
+                    cross.behavior = BulletBehavior.SlashCross;
+                    cross.hitShape = BulletHitShape.Cross;
+                    cross.rotationDeg = transform.eulerAngles.z;   // detonate at the crosshair's current spin
+                    cross.telegraphDuration = 0f;
+                    RequestChild(cross, sys.ClampToArena(transform.position));   // stationary cross inside the box
+                }
+                return Age < Data.lifetime;
+            }
+
+            // Homing + spin while the opacity fills.
             Vector2 target = sys.ResolveTargetPosition(Data.targetSelect, transform.position);
             Vector2 toTarget = target - (Vector2)transform.position;
             if (toTarget.sqrMagnitude > 0.0001f)
@@ -365,26 +425,16 @@ namespace TwoCT.Bullets
             if (Data.homingMaxSpeed > 0f && _homingVel.magnitude > Data.homingMaxSpeed)
                 _homingVel = _homingVel.normalized * Data.homingMaxSpeed;
             transform.position += (Vector3)(_homingVel * dt);
-            transform.Rotate(0f, 0f, Data.spinSpeedDeg * dt);   // spin
+            transform.Rotate(0f, 0f, Data.spinSpeedDeg * dt);
 
             _fillClock += dt;
             float p = _fillDur > 0f ? Mathf.Clamp01(_fillClock / _fillDur) : 1f;
-            SetAlpha(Mathf.Lerp(0.25f, 1f, p));
-            if (_fillClock >= _fillDur)
-            {
-                _fillClock = 0f;
-                _fillDur = Mathf.Max(Data.fillFloor, _fillDur - Data.fillSpeedup);   // faster each cycle
-                var cross = Data;
-                cross.behavior = BulletBehavior.SlashCross;
-                cross.hitShape = BulletHitShape.Cross;
-                cross.rotationDeg = transform.eulerAngles.z;   // detonate at the crosshair's current spin
-                cross.telegraphDuration = 0f;
-                RequestChild(cross, transform.position);        // stationary cross left behind
-            }
+            ShowCrosshair(Mathf.Lerp(0.25f, 1f, p));
+            if (_fillClock >= _fillDur) { _winding = true; _windupClock = 0f; _homingVel = Vector2.zero; }   // stop + begin windup
             return Age < Data.lifetime;
         }
 
-        // Lasso: invisible controller that drags the defend arena up/down for the pattern's duration.
+        // Lasso: controller that drags the defend arena up/down + shows the ropes tying it to the screen.
         private bool TickLasso(float dt, BulletSystem sys)
         {
             CurrentDamage = 0;
@@ -393,8 +443,47 @@ namespace TwoCT.Bullets
             float phase = Mathf.Repeat(Age, period) / period;   // 0..1, deterministic from Age
             float tri = phase < 0.5f ? Mathf.Lerp(-1f, 1f, phase * 2f) : Mathf.Lerp(1f, -1f, (phase - 0.5f) * 2f);
             sys.SetArenaLassoOffset(tri * range);
+            UpdateLassoRopes(sys);
             if (Age >= Data.lifetime) { sys.SetArenaLassoOffset(0f); return false; }
             return true;
+        }
+
+        // Two ropes from the top/bottom of the view down to the box's top/bottom edges; they stretch as
+        // the box is dragged. Placeholder rectangles (assign Data.sprite for real rope art).
+        private void UpdateLassoRopes(BulletSystem sys)
+        {
+            float width = Data.lassoRopeWidth;
+            if (width <= 0f) return;   // invisible if unset
+            if (_ropeTop == null) { _ropeTop = MakeRope("LassoRopeTop"); _ropeBottom = MakeRope("LassoRopeBottom"); }
+
+            Rect b = sys.ArenaBounds;
+            var cam = Camera.main;
+            float top = cam != null ? cam.transform.position.y + cam.orthographicSize + 0.5f : b.yMax + 6f;
+            float bottom = cam != null ? cam.transform.position.y - cam.orthographicSize - 0.5f : b.yMin - 6f;
+            float cx = b.center.x;
+
+            PlaceRope(_ropeTop, cx, b.yMax, top, width);      // from box top up to the screen top
+            PlaceRope(_ropeBottom, cx, b.yMin, bottom, width);// from box bottom down to the screen bottom
+        }
+
+        private SpriteRenderer MakeRope(string ropeName)
+        {
+            var go = new GameObject(ropeName);
+            go.transform.SetParent(transform, false);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = Data.sprite != null ? Data.sprite : PlayerDodgeIcon.MakeSquareSprite();
+            sr.color = Data.color.a > 0f ? Data.color : new Color(0.6f, 0.45f, 0.3f);   // tan rope
+            sr.sortingOrder = 22;   // above the arena fill/border
+            return sr;
+        }
+
+        private void PlaceRope(SpriteRenderer rope, float x, float edgeY, float anchorY, float width)
+        {
+            rope.gameObject.SetActive(true);
+            float h = Mathf.Max(0.01f, Mathf.Abs(anchorY - edgeY));
+            rope.transform.position = new Vector3(x, (edgeY + anchorY) * 0.5f, 0f);   // world-space
+            rope.transform.rotation = Quaternion.identity;
+            rope.transform.localScale = new Vector3(width, h, 1f);
         }
 
         // ---- Ryomi hitbox + slash visuals ----------------------------------
@@ -438,7 +527,41 @@ namespace TwoCT.Bullets
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = sq;
             sr.sortingOrder = 51;   // just above bullets (50)
+            sr.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;   // clip the long arms to the arena
             return sr;
+        }
+
+        // Small crosshair telegraph marker (child; kept off the mask so it's always visible inside the box).
+        // During the pre-shot windup it swaps to `windupSprite` (if set) to signal "about to fire";
+        // with no windup sprite it falls back to flashing solid white.
+        private void ShowCrosshair(float alpha, bool windup = false)
+        {
+            if (_crosshair == null)
+            {
+                var go = new GameObject("Crosshair");
+                go.transform.SetParent(transform, false);
+                _crosshair = go.AddComponent<SpriteRenderer>();
+                _crosshair.sortingOrder = 52;   // above the bars
+            }
+            bool useWindupArt = windup && Data.windupSprite != null;
+            Sprite normal = Data.crosshairSprite != null ? Data.crosshairSprite
+                          : (Data.sprite != null ? Data.sprite : PlayerDodgeIcon.MakeCircleSprite());
+            _crosshair.sprite = useWindupArt ? Data.windupSprite : normal;
+
+            float size = Data.crosshairSize > 0f ? Data.crosshairSize : 0.5f;
+            _crosshair.gameObject.SetActive(true);
+            _crosshair.transform.localScale = new Vector3(size, size, 1f);
+
+            bool hasArt = useWindupArt || Data.crosshairSprite != null || Data.sprite != null;
+            Color c = hasArt ? Color.white                        // real art shows its own colours
+                     : (windup ? Color.white : Data.color);       // placeholder: white flash during windup
+            c.a = alpha;
+            _crosshair.color = c;
+        }
+
+        private void HideCrosshair()
+        {
+            if (_crosshair != null && _crosshair.gameObject.activeSelf) _crosshair.gameObject.SetActive(false);
         }
 
         // Position/scale the two cross bars in LOCAL space; the parent's rotation orients the cross.

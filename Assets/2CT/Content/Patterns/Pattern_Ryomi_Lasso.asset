@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06886d9e18510ee4c81a292079c26cb3, type: 3}
+  m_Name: Pattern_Ryomi_Lasso
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BulletPatternSO
+  duration: 12
+  emitters:
+  - rid: 7301862606315454619
+  references:
+    version: 2
+    RefIds:
+    - rid: 7301862606315454619
+      type: {class: LassoEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
+      data:
+        startTime: 0
+        duration: 12
+        sprite: {fileID: 0}
+        lassoSpeed: 1
+        lassoRange: 1.5
+        tracking:
+          startTime: 0
+          duration: 12
+          sprite: {fileID: 0}
+          fillDuration: 3
+          fillSpeedup: 0.1
+          fillFloor: 0.4
+          windupDuration: 0.3
+          spinSpeedDeg: 10
+          homingAccel: 8
+          homingMaxSpeed: 4
+          armLength: 2
+          crosshairSize: 0.5
+          thickness: 0.25
+          growDuration: 0.25
+          holdDuration: 0
+          fadeDuration: 0.1
+          damage: 10
+          color: {r: 1, g: 0.6, b: 0.6, a: 1}

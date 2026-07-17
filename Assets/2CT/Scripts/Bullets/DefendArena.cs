@@ -103,6 +103,14 @@ namespace TwoCT.Bullets
             fillSr.sprite = sq; fillSr.color = fillColor; fillSr.sortingOrder = 20;
             _fill.localScale = new Vector3(size.x, size.y, 1f);
 
+            // Stencil mask covering the box: cross-slash bars render VisibleInsideMask, so their long
+            // arms are clipped to the battlefield. Child of the frame → it moves with the Lasso drag.
+            var maskGO = new GameObject("ArenaMask");
+            maskGO.transform.SetParent(_frame, false);
+            var mask = maskGO.AddComponent<SpriteMask>();
+            mask.sprite = sq;
+            maskGO.transform.localScale = new Vector3(size.x, size.y, 1f);
+
             // Four border strips (top, bottom, left, right).
             _borders = new Transform[4];
             for (int i = 0; i < 4; i++)

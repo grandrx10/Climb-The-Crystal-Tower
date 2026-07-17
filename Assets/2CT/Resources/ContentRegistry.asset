@@ -51,6 +51,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 9028a2e752bb74448aad3b3c91151d83, type: 2}
   bosses:
   - {fileID: 11400000, guid: 1a2790ff42a53bd4d827ce667ac3cfb8, type: 2}
+  - {fileID: 11400000, guid: 9ec8ca9cd1661954882897d8d20e1580, type: 2}
   patterns:
   - {fileID: 11400000, guid: c586ad49d2acb0b409c024077558af04, type: 2}
   - {fileID: 11400000, guid: 45c045bd1f7a566418b2e2c8e1f53bf3, type: 2}
@@ -58,6 +59,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 2055e198fca27dc438b9a1a20b3e7f3e, type: 2}
   - {fileID: 11400000, guid: 97721ab21c8009447a344fbe64223f1a, type: 2}
   - {fileID: 11400000, guid: d3303df8b98ac764b957fa956da3d7e9, type: 2}
+  - {fileID: 11400000, guid: 27c8e8f4c6013df47a000e7bde6c8e27, type: 2}
+  - {fileID: 11400000, guid: 453dca35b9bfa3d4b960a0317d018d68, type: 2}
+  - {fileID: 11400000, guid: 3c5e5fae7f7392e4193f02d24a5691bb, type: 2}
+  - {fileID: 11400000, guid: d739c924ab9c5f04fab91c0a1130752e, type: 2}
+  - {fileID: 11400000, guid: 4e348d8bb1f77e24690a7395c86dc31f, type: 2}
   characters:
   - {fileID: 11400000, guid: a26779a96b4d1aa478360802dfc7c646, type: 2}
   - {fileID: 11400000, guid: f85c3e355aa72db479eae1d223563e4f, type: 2}

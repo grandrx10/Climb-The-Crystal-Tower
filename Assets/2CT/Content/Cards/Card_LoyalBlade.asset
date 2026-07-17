@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4fc93200756f4d4bb3db5e80b029319, type: 3}
+  m_Name: Card_LoyalBlade
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.CardData
+  cardName: Loyal Blade
+  rarity: 0
+  category: 0
+  artwork: {fileID: 0}
+  cardId: Loyal Blade
+  manaCost: 0
+  targetType: 0
+  halfCostWhenShielded: 0
+  activateWhenDiscarded: 0
+  effects:
+  - rid: 7301862606315454606
+  vfxKey: LoyalBlade
+  overrideText: 
+  references:
+    version: 2
+    RefIds:
+    - rid: 7301862606315454606
+      type: {class: DealDamageEffect, ns: TwoCT.Data, asm: Assembly-CSharp}
+      data:
+        damage: 3
+        countsAsSpell: 0

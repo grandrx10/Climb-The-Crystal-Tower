@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4fc93200756f4d4bb3db5e80b029319, type: 3}
+  m_Name: Card_ManaBolt
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.CardData
+  cardName: Mana Bolt
+  rarity: 0
+  category: 0
+  artwork: {fileID: 0}
+  cardId: Mana Bolt
+  manaCost: 10
+  targetType: 0
+  halfCostWhenShielded: 0
+  activateWhenDiscarded: 0
+  effects:
+  - rid: 7301862606315454609
+  vfxKey: ManaBolt
+  overrideText: 
+  references:
+    version: 2
+    RefIds:
+    - rid: 7301862606315454609
+      type: {class: DealDamageEffect, ns: TwoCT.Data, asm: Assembly-CSharp}
+      data:
+        damage: 10
+        countsAsSpell: 1

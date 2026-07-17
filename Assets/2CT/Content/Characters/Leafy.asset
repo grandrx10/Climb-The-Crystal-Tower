@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cfab6383436ca646b63af5fab5ef299, type: 3}
+  m_Name: Leafy
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.CharacterData
+  characterName: Leafy
+  baseSprite: {fileID: 5627359011406830739, guid: de0a2c969c94db343b91239d15f55055, type: 3}
+  tint: {r: 0.45, g: 0.85, b: 0.35, a: 1}
+  flipX: 0
+  flipY: 0
+  dodgeIcon: {fileID: -376301070289199831, guid: 65a3189d6f332f54b9bc00e15458a377, type: 3}
+  maxHP: 30
+  startingMana: 10
+  manaPerRound: 10
+  baseCardsPerRound: 3
+  moveSpeed: {x: 4.5, y: 4.5}
+  startingDeck:
+  - {fileID: 11400000, guid: dec5777a9e3a15047a9c67a550325beb, type: 2}
+  - {fileID: 11400000, guid: c20bdcc8b8a8aa54d85a281b79691a6d, type: 2}
+  - {fileID: 11400000, guid: 07f7897329c0872459887323138b66b5, type: 2}
+  - {fileID: 11400000, guid: 07f7897329c0872459887323138b66b5, type: 2}
+  - {fileID: 11400000, guid: 4b234b2c33b5a354d8e42208c5e44531, type: 2}
+  - {fileID: 11400000, guid: 9e93b51ca7815f548b69a6d766119a36, type: 2}
+  - {fileID: 11400000, guid: 9e93b51ca7815f548b69a6d766119a36, type: 2}
+  - {fileID: 11400000, guid: 1b4550ce8b256114b9e494bae706f898, type: 2}
+  - {fileID: 11400000, guid: 746e377ae2648ae4982eee672c43869b, type: 2}
+  - {fileID: 11400000, guid: ab96fe091e2a4c9479e6b21237a86399, type: 2}

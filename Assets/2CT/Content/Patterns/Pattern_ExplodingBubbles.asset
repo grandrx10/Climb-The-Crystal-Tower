@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06886d9e18510ee4c81a292079c26cb3, type: 3}
+  m_Name: Pattern_ExplodingBubbles
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BulletPatternSO
+  duration: 6
+  emitters:
+  - rid: 7301862578625708118
+  references:
+    version: 2
+    RefIds:
+    - rid: 7301862578625708118
+      type: {class: ExplodingBubbleEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
+      data:
+        startTime: 0
+        duration: 6
+        sprite: {fileID: 4257838183451255174, guid: dca952fc056d776458689419dce25a2d, type: 3}
+        speed: 6
+        bubbleRadius: 0.4
+        damage: 8
+        curveDuration: 0.4
+        minTravelFraction: 0.05
+        maxTravelFraction: 0.95
+        bubbleColor: {r: 0.4, g: 0.8, b: 1, a: 1}
+        interval: 1
+        explosionRadius: 1
+        explosionExpand: 0.25
+        explosionLifetime: 0.6
+        explosionDamage: 8
+        explosionColor: {r: 1, g: 0.25, b: 0.2, a: 1}
+        explosionSprite: {fileID: -6223999385314353869, guid: 7603b2b66980e4544bf096b466459a06, type: 3}

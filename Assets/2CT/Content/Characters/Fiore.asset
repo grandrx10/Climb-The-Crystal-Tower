@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cfab6383436ca646b63af5fab5ef299, type: 3}
+  m_Name: Fiore
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.CharacterData
+  characterName: Fiore
+  baseSprite: {fileID: -8004192819816973206, guid: 797a4d46b42f270408abc91ab03d16b8, type: 3}
+  tint: {r: 1, g: 0.45, b: 0.3, a: 1}
+  dodgeIcon: {fileID: 69863883646868305, guid: 3194f11505a12f54f93eea7f86dddda8, type: 3}
+  maxHP: 30
+  startingMana: 10
+  manaPerRound: 10
+  baseCardsPerRound: 3
+  startingDeck:
+  - {fileID: 11400000, guid: 4b234b2c33b5a354d8e42208c5e44531, type: 2}
+  - {fileID: 11400000, guid: 4b234b2c33b5a354d8e42208c5e44531, type: 2}
+  - {fileID: 11400000, guid: b38355bad5111b545837291a247fa45e, type: 2}
+  - {fileID: 11400000, guid: b38355bad5111b545837291a247fa45e, type: 2}
+  - {fileID: 11400000, guid: 97f8d325065982e43aafdbff0ac445b9, type: 2}
+  - {fileID: 11400000, guid: 4f25281837e09ef459736f1baf1a8cd1, type: 2}
+  - {fileID: 11400000, guid: 9e93b51ca7815f548b69a6d766119a36, type: 2}
+  - {fileID: 11400000, guid: c20bdcc8b8a8aa54d85a281b79691a6d, type: 2}
+  - {fileID: 11400000, guid: 1b4550ce8b256114b9e494bae706f898, type: 2}
+  - {fileID: 11400000, guid: 746e377ae2648ae4982eee672c43869b, type: 2}

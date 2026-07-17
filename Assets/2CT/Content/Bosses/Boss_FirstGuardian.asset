@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2f90aba756ad7742954a577aae76f14, type: 3}
+  m_Name: Boss_FirstGuardian
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BossData
+  bossName: Buble The Great Mage
+  sprite: {fileID: 7581778546016595455, guid: a7dfa703e1b08b84e97e6e7b1f39f9a7, type: 3}
+  flipX: 1
+  flipY: 0
+  maxHP: 80
+  introLines:
+  - speaker: Guardian
+    text: So... climbers. You reek of ambition.
+    autoAdvanceSeconds: 2.5
+    actions: []
+  - speaker: Guardian
+    text: The Crystal Tower does not suffer the weak. Show me.
+    autoAdvanceSeconds: 2.5
+    actions: []
+  defeatLines:
+  - speaker: Guardian
+    text: Impossible... such strength...
+    autoAdvanceSeconds: 2.5
+    actions: []
+  - speaker: Guardian
+    text: Then climb, climbers. The Tower... awaits you.
+    autoAdvanceSeconds: 3
+    actions: []
+  phases:
+  - phaseName: Phase 1
+    enterAtHealthFraction: 1
+    attackRotation:
+    - {fileID: 11400000, guid: 45c045bd1f7a566418b2e2c8e1f53bf3, type: 2}
+    - {fileID: 11400000, guid: e1bb66b75d781d74a87bf27204149f31, type: 2}
+    - {fileID: 11400000, guid: c586ad49d2acb0b409c024077558af04, type: 2}
+    - {fileID: 11400000, guid: 97721ab21c8009447a344fbe64223f1a, type: 2}
+    transitionLines: []
+  - phaseName: Phase 2
+    enterAtHealthFraction: 0.3
+    attackRotation:
+    - {fileID: 11400000, guid: d3303df8b98ac764b957fa956da3d7e9, type: 2}
+    - {fileID: 11400000, guid: 2055e198fca27dc438b9a1a20b3e7f3e, type: 2}
+    transitionLines:
+    - speaker: Guardian
+      text: Enough games!
+      autoAdvanceSeconds: 1.5
+      actions: []
+  references:
+    version: 2
+    RefIds: []

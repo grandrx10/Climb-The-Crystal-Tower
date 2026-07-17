@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06886d9e18510ee4c81a292079c26cb3, type: 3}
+  m_Name: Pattern_TargetedBubbles
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BulletPatternSO
+  duration: 6
+  emitters:
+  - rid: 7301862578625708117
+  references:
+    version: 2
+    RefIds:
+    - rid: 7301862578625708117
+      type: {class: TargetedBubbleEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
+      data:
+        startTime: 0
+        duration: 6
+        sprite: {fileID: 4257838183451255174, guid: dca952fc056d776458689419dce25a2d, type: 3}
+        bubblesPerCycle: 3
+        bossRadius: 3
+        outwardTime: 0.4
+        interval: 2
+        bulletDelay: 0.35
+        speed: 9
+        bubbleRadius: 0.3
+        damage: 8
+        bubbleColor: {r: 0.6, g: 0.5, b: 1, a: 1}

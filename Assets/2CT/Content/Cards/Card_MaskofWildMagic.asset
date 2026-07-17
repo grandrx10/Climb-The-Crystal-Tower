@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4fc93200756f4d4bb3db5e80b029319, type: 3}
+  m_Name: Card_MaskofWildMagic
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.CardData
+  cardName: Mask of Wild Magic
+  rarity: 2
+  category: 3
+  artwork: {fileID: 0}
+  cardId: Mask of Wild Magic
+  manaCost: 15
+  targetType: 0
+  halfCostWhenShielded: 0
+  activateWhenDiscarded: 0
+  effects:
+  - rid: 7301862606315454600
+  vfxKey: MaskofWildMagic
+  overrideText: 
+  references:
+    version: 2
+    RefIds:
+    - rid: 7301862606315454600
+      type: {class: CastRandomSpellEffect, ns: TwoCT.Data, asm: Assembly-CSharp}
+      data: 

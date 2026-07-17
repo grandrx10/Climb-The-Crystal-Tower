@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4fc93200756f4d4bb3db5e80b029319, type: 3}
+  m_Name: Card_Divide
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.CardData
+  cardName: Divide
+  rarity: 0
+  category: 4
+  artwork: {fileID: 0}
+  cardId: Divide
+  manaCost: 5
+  targetType: 0
+  halfCostWhenShielded: 0
+  activateWhenDiscarded: 1
+  effects:
+  - rid: 7301862606315454589
+  vfxKey: Divide
+  overrideText: 
+  references:
+    version: 2
+    RefIds:
+    - rid: 7301862606315454589
+      type: {class: GainShieldEffect, ns: TwoCT.Data, asm: Assembly-CSharp}
+      data:
+        target: 0
+        shield: 7
+        roundsDuration: 0

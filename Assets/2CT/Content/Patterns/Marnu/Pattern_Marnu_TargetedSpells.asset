@@ -10,26 +10,24 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06886d9e18510ee4c81a292079c26cb3, type: 3}
-  m_Name: Pattern_Ryomi_Cut
+  m_Name: Pattern_Marnu_TargetedSpells
   m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BulletPatternSO
-  duration: 10
+  duration: 12
   emitters:
-  - rid: 7301862606315454617
+  - rid: 7301862606315454672
   references:
     version: 2
     RefIds:
-    - rid: 7301862606315454617
-      type: {class: SlidingCutEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
+    - rid: 7301862606315454672
+      type: {class: TargetedSpellsEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
       data:
         startTime: 0
-        duration: 10
+        duration: 12
         sprite: {fileID: 0}
-        interval: 2
-        intervalDecrease: 0.05
-        intervalFloor: 0.8
-        speed: 5
-        slashHalfWidth: 0.15
-        slashHalfHeight: 1
-        damage: 10
-        afterImageInterval: 0.05
-        color: {r: 0.85, g: 0.9, b: 1, a: 1}
+        spellBook: {fileID: 11400000, guid: 77d0354b3a1342b2a9d2c8c7814850da, type: 2}
+        spellsPerWave: 3
+        withinWaveDelay: 0.3
+        barrageInterval: 4
+        stageRadius: 1.5
+        flyTime: 0.35
+        launchSpeed: 6

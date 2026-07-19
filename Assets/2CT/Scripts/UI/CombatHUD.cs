@@ -109,7 +109,7 @@ namespace TwoCT.UI
                 if (panel.manaText) panel.manaText.text = $"{p.Mana.Value} MP";
             }
 
-            // Boss dialogue box floats above the boss's head.
+            // Boss dialogue box floats above the boss's head (auto-hides after its line duration).
             if (bossDialoguePanel != null && bossDialoguePanel.activeSelf)
             {
                 if (Time.time > _bossTextHideAt) bossDialoguePanel.SetActive(false);

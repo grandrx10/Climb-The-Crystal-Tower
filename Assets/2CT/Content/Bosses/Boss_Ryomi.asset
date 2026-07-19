@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Boss_Ryomi
   m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BossData
   bossName: Ryomi
-  sprite: {fileID: 0}
+  sprite: {fileID: -1651686780208983921, guid: 90cff0f063e8240449863ba1600f184b, type: 3}
   flipX: 0
   flipY: 0
   maxHP: 150
@@ -39,11 +39,19 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 27c8e8f4c6013df47a000e7bde6c8e27, type: 2}
     - {fileID: 11400000, guid: d739c924ab9c5f04fab91c0a1130752e, type: 2}
     - {fileID: 11400000, guid: 4e348d8bb1f77e24690a7395c86dc31f, type: 2}
+    - {fileID: 11400000, guid: 21f2a63ddbe7bcf49a900b215004a8e2, type: 2}
+    - {fileID: 11400000, guid: 9ce8d84c4527f214491977cc7327217a, type: 2}
+    - {fileID: 11400000, guid: 9f9aac332b325b64baf036eb0350ef33, type: 2}
     transitionLines: []
   - phaseName: Phase 2
     enterAtHealthFraction: 0.4
     attackRotation:
     - {fileID: 11400000, guid: 453dca35b9bfa3d4b960a0317d018d68, type: 2}
+    - {fileID: 11400000, guid: 9ce8d84c4527f214491977cc7327217a, type: 2}
+    - {fileID: 11400000, guid: aada68fc81429264a90db0e81b4a0dd8, type: 2}
+    - {fileID: 11400000, guid: 3ae613ce99f44d74a82ad3f3ab161c0b, type: 2}
+    - {fileID: 11400000, guid: 21f2a63ddbe7bcf49a900b215004a8e2, type: 2}
+    - {fileID: 11400000, guid: 9f9aac332b325b64baf036eb0350ef33, type: 2}
     transitionLines:
     - speaker: Ryomi
       text: Now yer roped in.

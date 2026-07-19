@@ -40,11 +40,14 @@ namespace TwoCT.Bullets
         private readonly List<PlayerDodgeIcon> _icons = new List<PlayerDodgeIcon>();
         private Transform _frame;
         private Transform _fill;
+        private Transform _mask;
         private Transform[] _borders;
         private Coroutine _frameRoutine;
 
         public Vector2 Center => transform.position;
-        public Rect Bounds => new Rect(Center - size * 0.5f, size);
+        // The box can be temporarily taller (ride mode raises the ceiling): the extra height is added
+        // to the TOP only — the floor stays put.
+        public Rect Bounds => new Rect(Center - size * 0.5f, new Vector2(size.x, size.y + _extraHeight));
         public Rect InnerBounds
         {
             get { var b = Bounds; return new Rect(b.x + padding, b.y + padding, b.width - padding * 2f, b.height - padding * 2f); }
@@ -85,6 +88,74 @@ namespace TwoCT.Bullets
             var p = transform.localPosition; p.y = _lassoBaseY; transform.localPosition = p;
         }
 
+        // ---- Marnu: rising water + wind force -------------------------------
+        private float _waterLevel01;      // fraction of the box height currently flooded (0..cap), eases toward the target
+        private float _waterTarget01;     // level the water is rising toward
+        private float _waterRisePerSec;   // rise speed while easing (fraction of height per second)
+        private Vector2 _windForce;       // horizontal force added to the local icon's movement
+
+        /// <summary>Marnu's Water spell: how much of the box (bottom-up) is flooded, 0–0.5.
+        /// Eases toward the latest cast's target rather than jumping instantly.</summary>
+        public float WaterLevel01 => _waterLevel01;
+
+        /// <summary>Raise the flood target by <paramref name="rise"/> (fraction of height), capped at
+        /// <paramref name="max"/>; the level then rises there over <paramref name="riseSeconds"/> (0 = instant).</summary>
+        public void RaiseWater(float rise, float max, float riseSeconds)
+        {
+            _waterTarget01 = Mathf.Min(Mathf.Max(0f, max), _waterTarget01 + Mathf.Max(0f, rise));
+            if (riseSeconds <= 0f) _waterLevel01 = _waterTarget01;
+            else _waterRisePerSec = Mathf.Max(0.0001f, rise) / riseSeconds;
+        }
+        public void ResetWater() { _waterLevel01 = 0f; _waterTarget01 = 0f; }
+
+        private void Update()
+        {
+            if (_waterLevel01 < _waterTarget01)
+                _waterLevel01 = Mathf.MoveTowards(_waterLevel01, _waterTarget01, _waterRisePerSec * Time.deltaTime);
+
+            // Ride-mode ceiling raise: ease toward the target extra height and re-fit the frame visuals.
+            if (!Mathf.Approximately(_extraHeight, RideExtraHeight))
+            {
+                _extraHeight = Mathf.MoveTowards(_extraHeight, RideExtraHeight, 8f * Time.deltaTime);
+                if (_frame != null) LayoutFrame();
+            }
+        }
+
+        /// <summary>Marnu's Wind spell: the horizontal force (world units/sec) pulling the local dodge icon;
+        /// the icon adds this to its movement each frame. Zero when no wind is active.</summary>
+        public Vector2 WindForce => _windForce;
+        public void SetWind(Vector2 force) => _windForce = force;
+        public void ResetWind() => _windForce = Vector2.zero;
+
+        // ---- Horus: Joint Horse Rider "ride mode" ---------------------------
+        // While ride mode is on, each dodge icon rides a horse at a fixed lane x and obeys jump physics
+        // (gravity + variable-height W jump) instead of free WASD movement, dodging scrolling obstacles.
+        public bool RideMode { get; private set; }
+        public float RideGravity { get; private set; }
+        public float RideJumpVelocity { get; private set; }
+        public float RideMaxJumpHold { get; private set; }
+        public float RideLowGravityFactor { get; private set; }
+        public Sprite RideHorseSprite { get; private set; }
+        /// <summary>Target extra box height while riding (the ceiling rises so held jumps matter).</summary>
+        public float RideExtraHeight { get; private set; }
+        /// <summary>Horizontal steer speed multiplier while riding (1 when not riding / unset).</summary>
+        public float RideSpeedMul { get; private set; } = 1f;
+        private float _extraHeight;   // animated current value, eases toward RideExtraHeight
+
+        public void SetRideMode(bool on, float gravity, float jumpVel, float maxHold, float lowG, Sprite horse,
+                                float extraHeight, float speedMul)
+        {
+            RideMode = on;
+            RideGravity = gravity;
+            RideJumpVelocity = jumpVel;
+            RideMaxJumpHold = maxHold;
+            RideLowGravityFactor = lowG;
+            RideHorseSprite = horse;
+            RideExtraHeight = on ? Mathf.Max(0f, extraHeight) : 0f;
+            RideSpeedMul = on && speedMul > 0f ? speedMul : 1f;
+        }
+        public void ResetRide() { RideMode = false; RideExtraHeight = 0f; RideSpeedMul = 1f; }
+
         // =====================================================================
         //  Visible frame + expansion animation
         // =====================================================================
@@ -101,15 +172,14 @@ namespace TwoCT.Bullets
             _fill = fillGO.transform; _fill.SetParent(_frame, false);
             var fillSr = fillGO.AddComponent<SpriteRenderer>();
             fillSr.sprite = sq; fillSr.color = fillColor; fillSr.sortingOrder = 20;
-            _fill.localScale = new Vector3(size.x, size.y, 1f);
 
             // Stencil mask covering the box: cross-slash bars render VisibleInsideMask, so their long
             // arms are clipped to the battlefield. Child of the frame → it moves with the Lasso drag.
             var maskGO = new GameObject("ArenaMask");
-            maskGO.transform.SetParent(_frame, false);
+            _mask = maskGO.transform;
+            _mask.SetParent(_frame, false);
             var mask = maskGO.AddComponent<SpriteMask>();
             mask.sprite = sq;
-            maskGO.transform.localScale = new Vector3(size.x, size.y, 1f);
 
             // Four border strips (top, bottom, left, right).
             _borders = new Transform[4];
@@ -121,19 +191,31 @@ namespace TwoCT.Bullets
                 sr.sprite = sq; sr.color = borderColor; sr.sortingOrder = 21;
                 _borders[i] = b.transform;
             }
-            LayoutBorders();
+            LayoutFrame();
             _frame.gameObject.SetActive(false);
         }
 
-        private void LayoutBorders()
+        // Fit the fill, mask and borders to the current box size (incl. any ride-mode extra height,
+        // which grows the box UPWARD only — the floor border stays put).
+        private void LayoutFrame()
         {
+            float ex = _extraHeight;
+            float h = size.y + ex;
+            float cy = ex * 0.5f;                 // vertical centre of the (possibly taller) box
+            _fill.localScale = new Vector3(size.x, h, 1f);
+            _fill.localPosition = new Vector3(0f, cy, 0f);
+            if (_mask != null)
+            {
+                _mask.localScale = new Vector3(size.x, h, 1f);
+                _mask.localPosition = new Vector3(0f, cy, 0f);
+            }
             float t = borderThickness;
             // top, bottom
-            _borders[0].localPosition = new Vector3(0, size.y * 0.5f, 0); _borders[0].localScale = new Vector3(size.x + t, t, 1);
+            _borders[0].localPosition = new Vector3(0, size.y * 0.5f + ex, 0); _borders[0].localScale = new Vector3(size.x + t, t, 1);
             _borders[1].localPosition = new Vector3(0, -size.y * 0.5f, 0); _borders[1].localScale = new Vector3(size.x + t, t, 1);
             // left, right
-            _borders[2].localPosition = new Vector3(-size.x * 0.5f, 0, 0); _borders[2].localScale = new Vector3(t, size.y + t, 1);
-            _borders[3].localPosition = new Vector3(size.x * 0.5f, 0, 0); _borders[3].localScale = new Vector3(t, size.y + t, 1);
+            _borders[2].localPosition = new Vector3(-size.x * 0.5f, cy, 0); _borders[2].localScale = new Vector3(t, h + t, 1);
+            _borders[3].localPosition = new Vector3(size.x * 0.5f, cy, 0); _borders[3].localScale = new Vector3(t, h + t, 1);
         }
 
         private IEnumerator ExpandFrame()

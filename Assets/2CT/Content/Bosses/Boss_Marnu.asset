@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2f90aba756ad7742954a577aae76f14, type: 3}
+  m_Name: Boss_Marnu
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BossData
+  bossName: Marnu
+  sprite: {fileID: 21300000, guid: 23564ea9acd274e4b91f83ccf1cef5c2, type: 3}
+  flipX: 1
+  flipY: 0
+  maxHP: 120
+  introLines:
+  - speaker: Marnu
+    text: INTRUDERS! You dare open me uninvited?!
+    autoAdvanceSeconds: 3
+    actions: []
+  - speaker: Marnu
+    text: Then be READ your last rites!
+    autoAdvanceSeconds: 2.5
+    actions: []
+  defeatLines:
+  - speaker: Marnu
+    text: ...my pages... scattered to the wind...
+    autoAdvanceSeconds: 3
+    actions: []
+  phases:
+  - phaseName: Phase 1
+    enterAtHealthFraction: 1
+    attackRotation:
+    - {fileID: 11400000, guid: c09912229d2434944aa05f63a38b1e5e, type: 2}
+    - {fileID: 11400000, guid: 421751ddb9b78ee4bb5a147cd0da9df9, type: 2}
+    - {fileID: 11400000, guid: 0c98722726088624c87424a45dd9842f, type: 2}
+    - {fileID: 11400000, guid: d0f2cd1bf604cc343834dca7bae2a22f, type: 2}
+    - {fileID: 11400000, guid: 0473326e0eb49b6498592c23512ce5da, type: 2}
+    - {fileID: 11400000, guid: a6193de6eda507b45b4683f71dcdf78f, type: 2}
+    transitionLines: []
+  - phaseName: Phase 2 (Rage)
+    enterAtHealthFraction: 0.5
+    attackRotation:
+    - {fileID: 11400000, guid: 1387b56158be4994eab92f7b160914a2, type: 2}
+    - {fileID: 11400000, guid: 21937857302489b42b1e2263b9bc2d9e, type: 2}
+    - {fileID: 11400000, guid: d0f2cd1bf604cc343834dca7bae2a22f, type: 2}
+    - {fileID: 11400000, guid: a6193de6eda507b45b4683f71dcdf78f, type: 2}
+    - {fileID: 11400000, guid: c805e677e1e9aa94f916e8c0b0d4ef78, type: 2}
+    transitionLines:
+    - speaker: Marnu
+      text: ENOUGH! Drown in a SEA of spells!
+      autoAdvanceSeconds: 2
+      actions: []
+  references:
+    version: 2
+    RefIds: []

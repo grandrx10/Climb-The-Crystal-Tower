@@ -108,6 +108,10 @@ namespace TwoCT.Data
         public int damage = 10;
         [Tooltip("Seconds between afterimage drops behind the slash.")]
         public float afterImageInterval = 0.05f;
+        [Tooltip("Flip the slash sprite horizontally at spawn (e.g. your sprite is drawn facing left).")]
+        public bool flipXOnSpawn = false;
+        [Tooltip("Flip the slash sprite vertically at spawn.")]
+        public bool flipYOnSpawn = false;
         public Color color = new Color(0.85f, 0.9f, 1f);
 
         public override void Generate(List<BulletSpawnData> output, System.Random rng, in PatternContext ctx)
@@ -136,6 +140,8 @@ namespace TwoCT.Data
                     color = color,
                     sprite = sprite,
                     afterImageInterval = afterImageInterval,
+                    flipXOnSpawn = flipXOnSpawn,
+                    flipYOnSpawn = flipYOnSpawn,
                     lifetime = life,
                     rotationDeg = 0f,
                 });
@@ -158,8 +164,10 @@ namespace TwoCT.Data
         public float bulletLifetime = 8f;
         public float bulletRadius = 0.3f;
         public int damage = 8;
-        [Tooltip("Seconds between afterimage-trail drops (0 = no trail).")]
-        public float afterImageInterval = 0.04f;
+        [Tooltip("Flip the sprite horizontally at spawn (e.g. your sprite is drawn facing left).")]
+        public bool flipXOnSpawn = false;
+        [Tooltip("Flip the sprite vertically at spawn.")]
+        public bool flipYOnSpawn = false;
         public Color color = new Color(1f, 0.7f, 0.4f);
 
         public override void Generate(List<BulletSpawnData> output, System.Random rng, in PatternContext ctx)
@@ -186,7 +194,8 @@ namespace TwoCT.Data
                     lifetime = bulletLifetime,
                     color = color,
                     sprite = sprite,
-                    afterImageInterval = afterImageInterval,
+                    flipXOnSpawn = flipXOnSpawn,
+                    flipYOnSpawn = flipYOnSpawn,
                 });
             }
         }
@@ -210,11 +219,18 @@ namespace TwoCT.Data
         public float fillFloor = 0.4f;
         [Tooltip("Just before firing, the crosshair stops + swaps to the windup sprite for this long, then detonates.")]
         public float windupDuration = 0.3f;
-        public float spinSpeedDeg = 10f;
+        [Tooltip("Each crosshair picks a random spin speed (deg/sec) in this range.")]
+        public float spinSpeedMin = 10f;
+        public float spinSpeedMax = 40f;
         [Tooltip("Homing acceleration toward the target (higher = tighter tracking).")]
         public float homingAccel = 8f;
-        [Tooltip("Max homing speed (allows overshoots and curved chases).")]
-        public float homingMaxSpeed = 4f;
+        [Tooltip("Each crosshair picks a random max homing speed in this range (allows overshoots/curved chases).")]
+        public float homingMaxSpeedMin = 3f;
+        public float homingMaxSpeedMax = 6f;
+
+        [Header("Spawning")]
+        [Tooltip("Seconds between spawning ADDITIONAL tracking crosshairs, each on a random player. 0 = a single crosshair for the whole attack.")]
+        public float spawnInterval = 0f;
 
         [Header("Detonated cross")]
         [Tooltip("Minimum half-length of the detonated cross bars; grown to span the battlefield.")]
@@ -231,31 +247,44 @@ namespace TwoCT.Data
         public override void Generate(List<BulletSpawnData> output, System.Random rng, in PatternContext ctx)
         {
             float arm = Mathf.Max(armLength, new Vector2(ctx.arenaBounds.width, ctx.arenaBounds.height).magnitude);
-            output.Add(MakeTracking((float)rng.NextDouble(), arm));
+            if (spawnInterval > 0f)
+            {
+                // New crosshair every interval, each on a random player (accumulate over the attack).
+                for (float t = 0f; t < duration; t += Mathf.Max(0.1f, spawnInterval))
+                    output.Add(MakeTracking((float)rng.NextDouble(), arm, RandSpin(rng), RandSpeed(rng), startTime + t));
+            }
+            else
+            {
+                output.Add(MakeTracking((float)rng.NextDouble(), arm, RandSpin(rng), RandSpeed(rng), startTime));
+            }
         }
 
+        public float RandSpin(System.Random rng) => RandRange(rng, spinSpeedMin, spinSpeedMax);
+        public float RandSpeed(System.Random rng) => RandRange(rng, homingMaxSpeedMin, homingMaxSpeedMax);
+
         /// <summary>One tracking-crosshair spawn (shared so LassoEmitter can reuse this config).
-        /// <paramref name="arm"/> is the detonated-cross half-length (arena-spanning).</summary>
-        public BulletSpawnData MakeTracking(float select, float arm)
+        /// <paramref name="arm"/> is the arena-spanning cross half-length; <paramref name="spin"/> and
+        /// <paramref name="maxSpeed"/> are the per-crosshair randomised values.</summary>
+        public BulletSpawnData MakeTracking(float select, float arm, float spin, float maxSpeed, float time)
         {
             return new BulletSpawnData
             {
-                time = startTime,
+                time = time,
                 behavior = BulletBehavior.TrackingCut,
                 hitShape = BulletHitShape.None,   // crosshair is harmless; its detonation cross hits
                 originOffset = Vector2.zero,
                 damage = damage,
                 color = color,
                 sprite = sprite,
-                lifetime = duration,
+                lifetime = duration,              // cleared at pattern end regardless
                 targetSelect = select,
                 fillDuration = fillDuration,
                 fillSpeedup = fillSpeedup,
                 fillFloor = fillFloor,
                 windupDuration = windupDuration,
-                spinSpeedDeg = spinSpeedDeg,
+                spinSpeedDeg = spin,
                 homingAccel = homingAccel,
-                homingMaxSpeed = homingMaxSpeed,
+                homingMaxSpeed = maxSpeed,
                 rotationDeg = 0f,
                 crossArmLength = arm,
                 crossThickness = thickness,
@@ -312,8 +341,8 @@ namespace TwoCT.Data
             tracking.startTime = startTime;
             tracking.duration = duration;
             float arm = Mathf.Max(tracking.armLength, new Vector2(ctx.arenaBounds.width, ctx.arenaBounds.height).magnitude);
-            output.Add(tracking.MakeTracking(0f, arm));
-            output.Add(tracking.MakeTracking(0.999f, arm));
+            output.Add(tracking.MakeTracking(0f, arm, tracking.RandSpin(rng), tracking.RandSpeed(rng), startTime));
+            output.Add(tracking.MakeTracking(0.999f, arm, tracking.RandSpin(rng), tracking.RandSpeed(rng), startTime));
         }
 
         public override string Describe() => $"Lasso: box drags ±{lassoRange} @ {lassoSpeed} + 2 tracking cuts";

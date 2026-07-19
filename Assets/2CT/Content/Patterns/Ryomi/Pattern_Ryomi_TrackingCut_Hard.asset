@@ -10,25 +10,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06886d9e18510ee4c81a292079c26cb3, type: 3}
-  m_Name: Pattern_Ryomi_MarkedStrike
+  m_Name: Pattern_Ryomi_TrackingCut_Hard
   m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BulletPatternSO
-  duration: 9
+  duration: 10
   emitters:
-  - rid: 7301862606315454620
+  - rid: 7301862606315454618
   references:
     version: 2
     RefIds:
-    - rid: 7301862606315454620
-      type: {class: MarkedStrikeEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
+    - rid: 7301862606315454618
+      type: {class: TrackingCutEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
       data:
         startTime: 0
-        duration: 9
+        duration: 10
         sprite: {fileID: -6142374563283994760, guid: bd2ea0f67cb037449b319f423f699e22, type: 3}
-        initialCount: 1
-        barrageInterval: 3
-        spawnStagger: 0.7
-        spawnRadius: 1
-        telegraphDuration: 1.5
+        crosshairSprite: {fileID: -6142374563283994760, guid: bd2ea0f67cb037449b319f423f699e22, type: 3}
+        windupSprite: {fileID: -9097281665673729154, guid: f8468e9a1ee043947b3d09e7e265e3cb, type: 3}
+        fillDuration: 2
+        fillSpeedup: 0.2
+        fillFloor: 0.4
+        windupDuration: 0.3
+        spinSpeedMin: 10
+        spinSpeedMax: 40
+        homingAccel: 8
+        homingMaxSpeedMin: 3
+        homingMaxSpeedMax: 6
+        spawnInterval: 3
         armLength: 2
         crosshairSize: 0.5
         thickness: 0.25
@@ -36,4 +43,4 @@ MonoBehaviour:
         holdDuration: 0
         fadeDuration: 0.1
         damage: 10
-        color: {r: 1, g: 0.85, b: 0.4, a: 1}
+        color: {r: 1, g: 0.6, b: 0.6, a: 1}

@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2f90aba756ad7742954a577aae76f14, type: 3}
+  m_Name: Boss_Horus
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BossData
+  bossName: Horus
+  sprite: {fileID: 812471810674934270, guid: 672bd8d62f78c724e80f563583e0e6cb, type: 3}
+  flipX: 0
+  flipY: 0
+  maxHP: 140
+  introLines:
+  - speaker: Horus
+    text: "You'll not take my apple \u2014 nor the divine knowledge within!"
+    autoAdvanceSeconds: 3
+    actions: []
+  - speaker: Horus
+    text: Ride, thieves! If you can!
+    autoAdvanceSeconds: 2
+    actions: []
+  defeatLines:
+  - speaker: Horus
+    text: The knowledge... was never mine to hoard...
+    autoAdvanceSeconds: 3
+    actions: []
+  phases:
+  - phaseName: Phase 1
+    enterAtHealthFraction: 1
+    attackRotation:
+    - {fileID: 11400000, guid: 1ce8712d8605d7743a2c841521445bd2, type: 2}
+    - {fileID: 11400000, guid: ade4bb8b73953764e8d526389eade418, type: 2}
+    - {fileID: 11400000, guid: f9c16ea655d32f841925ee6161e33d5c, type: 2}
+    - {fileID: 11400000, guid: d2843bc8b55535545aff60834882aeec, type: 2}
+    transitionLines: []
+  - phaseName: Phase 2
+    enterAtHealthFraction: 0.5
+    attackRotation:
+    - {fileID: 11400000, guid: ade4bb8b73953764e8d526389eade418, type: 2}
+    - {fileID: 11400000, guid: 9096e8f65d7c5e9418ae07e467c9c885, type: 2}
+    transitionLines:
+    - speaker: Horus
+      text: Then taste the orchard's WRATH!
+      autoAdvanceSeconds: 2
+      actions: []
+  references:
+    version: 2
+    RefIds: []

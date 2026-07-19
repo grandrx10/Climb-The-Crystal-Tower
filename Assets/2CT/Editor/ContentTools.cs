@@ -254,6 +254,249 @@ namespace TwoCT.EditorTools
         }
 
         // =====================================================================
+        //  Marnu (boss 3) — additive / non-destructive
+        // =====================================================================
+        private static readonly string[] MarnuPatternNames =
+        {
+            "Pattern_Marnu_CrazySpells", "Pattern_Marnu_SurroundSpells",
+            "Pattern_Marnu_TargetedSpells", "Pattern_Marnu_SeaOfSpells"
+        };
+
+        /// <summary>Coded default for each Marnu attack pattern (emitter fields carry the design defaults).</summary>
+        private static void ConfigureMarnuPattern(string name, BulletPatternSO p)
+        {
+            switch (name)
+            {
+                case "Pattern_Marnu_CrazySpells":
+                    p.duration = 12f;
+                    p.emitters = new List<BulletEmitter> { new CrazySpellsEmitter { startTime = 0f, duration = 12f, interval = 2f, radius = 2f } };
+                    break;
+                case "Pattern_Marnu_SurroundSpells":
+                    p.duration = 14f;
+                    p.emitters = new List<BulletEmitter> { new SurroundSpellsEmitter { startTime = 0f, duration = 14f, spellCount = 6, detonateInterval = 2f } };
+                    break;
+                case "Pattern_Marnu_TargetedSpells":
+                    p.duration = 12f;
+                    p.emitters = new List<BulletEmitter> { new TargetedSpellsEmitter { startTime = 0f, duration = 12f, spellsPerWave = 3, barrageInterval = 2.5f } };
+                    break;
+                case "Pattern_Marnu_SeaOfSpells":
+                    p.duration = 11f;
+                    p.emitters = new List<BulletEmitter> { new SeaOfSpellsEmitter { startTime = 0f, duration = 11f, spellCount = 8, launchInterval = 1f } };
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Additive: creates Marnu (boss 3, 120 HP, 2 phases) + his four attack patterns only if they don't
+        /// already exist, then rebuilds the registry so a combat trigger can select him. Existing assets
+        /// (incl. Buble/Ryomi and any Marnu tuning) are left untouched. Point an Interactable's "Boss To
+        /// Fight" at Boss_Marnu to fight him in the universal combat scene.
+        /// </summary>
+        [MenuItem("2CT/Add Marnu (Boss 3)", priority = 5)]
+        public static void AddMarnu()
+        {
+            var created = new List<string>();
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                EnsureFolder(Root + "/Patterns");
+                EnsureFolder(Root + "/Bosses");
+
+                // The ONE shared spell tuning asset all four attacks reference.
+                string bookPath = $"{Root}/Patterns/SpellBook_Marnu.asset";
+                var book = AssetDatabase.LoadAssetAtPath<MarnuSpellBookSO>(bookPath);
+                if (book == null)
+                {
+                    book = ScriptableObject.CreateInstance<MarnuSpellBookSO>();
+                    AssetDatabase.CreateAsset(book, bookPath);
+                    EditorUtility.SetDirty(book);
+                    created.Add("SpellBook_Marnu");
+                }
+
+                var patterns = new Dictionary<string, BulletPatternSO>();
+                foreach (var name in MarnuPatternNames)
+                {
+                    string path = $"{Root}/Patterns/{name}.asset";
+                    var p = AssetDatabase.LoadAssetAtPath<BulletPatternSO>(path);
+                    if (p == null)                                     // create only if missing (preserve tuning)
+                    {
+                        p = ScriptableObject.CreateInstance<BulletPatternSO>();
+                        AssetDatabase.CreateAsset(p, path);
+                        ConfigureMarnuPattern(name, p);
+                        EditorUtility.SetDirty(p);
+                        created.Add(name);
+                    }
+                    // Wire the shared book into any Marnu emitter that lost/never had it (repair-friendly).
+                    if (p.emitters != null)
+                        foreach (var e in p.emitters)
+                            if (e is MarnuPageEmitter me && me.spellBook == null)
+                            {
+                                me.spellBook = book;
+                                EditorUtility.SetDirty(p);
+                            }
+                    patterns[name] = p;
+                }
+
+                string bossPath = $"{Root}/Bosses/Boss_Marnu.asset";
+                var boss = AssetDatabase.LoadAssetAtPath<BossData>(bossPath);
+                if (boss == null)
+                {
+                    boss = ScriptableObject.CreateInstance<BossData>();
+                    AssetDatabase.CreateAsset(boss, bossPath);
+                    boss.bossName = "Marnu";
+                    boss.maxHP = 120;
+                    boss.introLines = new List<DialogueLine>
+                    {
+                        new DialogueLine { speaker = "Marnu", text = "INTRUDERS! You dare open me uninvited?!", autoAdvanceSeconds = 3f },
+                        new DialogueLine { speaker = "Marnu", text = "Then be READ your last rites!", autoAdvanceSeconds = 2.5f },
+                    };
+                    boss.defeatLines = new List<DialogueLine>
+                    {
+                        new DialogueLine { speaker = "Marnu", text = "...my pages... scattered to the wind...", autoAdvanceSeconds = 3f },
+                    };
+                    boss.phases = new List<BossPhase>
+                    {
+                        new BossPhase { phaseName = "Phase 1", enterAtHealthFraction = 1f,
+                            attackRotation = new List<BulletPatternSO> {
+                                patterns["Pattern_Marnu_CrazySpells"], patterns["Pattern_Marnu_SurroundSpells"],
+                                patterns["Pattern_Marnu_TargetedSpells"] },
+                            transitionLines = new List<DialogueLine>() },
+                        new BossPhase { phaseName = "Phase 2 (Rage)", enterAtHealthFraction = 0.5f,
+                            attackRotation = new List<BulletPatternSO> { patterns["Pattern_Marnu_SeaOfSpells"] },
+                            transitionLines = new List<DialogueLine> { new DialogueLine { speaker = "Marnu", text = "ENOUGH! Drown in a SEA of spells!", autoAdvanceSeconds = 2f } } },
+                    };
+                    EditorUtility.SetDirty(boss);
+                    created.Add("Boss_Marnu");
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+            RebuildRegistry();
+            EditorUtility.DisplayDialog("2CT",
+                (created.Count == 0 ? "Marnu + patterns already existed (left as-is)." : "Created: " + string.Join(", ", created)) +
+                "\n\nRegistry rebuilt. Set a combat trigger's 'Boss To Fight' to Boss_Marnu. All four attacks share one spell tuning asset: edit SpellBook_Marnu (Content/Patterns) to change a spell everywhere. (Assign BossData.sprite + the per-spell sprites on SpellBook_Marnu when ready.)",
+                "OK");
+        }
+
+        // =====================================================================
+        //  Horus (boss 4) — additive / non-destructive
+        // =====================================================================
+        private static readonly string[] HorusPatternNames =
+        {
+            "Pattern_Horus_AppleChuck", "Pattern_Horus_HorseRace", "Pattern_Horus_JointRider",
+            "Pattern_Horus_ExplosiveApples", "Pattern_Horus_JointRiderHard"
+        };
+
+        /// <summary>Coded default for each Horus attack pattern (emitter fields carry the design defaults).</summary>
+        private static void ConfigureHorusPattern(string name, BulletPatternSO p)
+        {
+            switch (name)
+            {
+                case "Pattern_Horus_AppleChuck":
+                    p.duration = 12f;
+                    p.emitters = new List<BulletEmitter> { new AppleChuckEmitter { startTime = 0f, duration = 12f, interval = 1f, intervalDecrease = 0.05f, damage = 6 } };
+                    break;
+                case "Pattern_Horus_HorseRace":
+                    p.duration = 14f;
+                    p.emitters = new List<BulletEmitter> { new HorseRaceEmitter { startTime = 0f, duration = 14f, raceInterval = 2f, appleSpeed = 4f, horseSpeed = 6f } };
+                    break;
+                case "Pattern_Horus_JointRider":
+                    p.duration = 20f;
+                    p.emitters = new List<BulletEmitter> { new JointHorseRiderEmitter { startTime = 0f, duration = 20f, hardMode = false } };
+                    break;
+                case "Pattern_Horus_ExplosiveApples":
+                    p.duration = 12f;
+                    p.emitters = new List<BulletEmitter> { new ExplosiveApplesEmitter { startTime = 0f, duration = 12f, interval = 1f, intervalDecrease = 0.05f, damage = 6, burstCount = 6 } };
+                    break;
+                case "Pattern_Horus_JointRiderHard":
+                    p.duration = 20f;
+                    p.emitters = new List<BulletEmitter> { new JointHorseRiderEmitter { startTime = 0f, duration = 20f, hardMode = true } };
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Additive: creates Horus (boss 4, 140 HP, 2 phases) + his five attack patterns only if they don't
+        /// already exist, then rebuilds the registry so a combat trigger can select him. Existing assets
+        /// (incl. the other bosses and any Horus tuning) are left untouched. Point an Interactable's "Boss To
+        /// Fight" at Boss_Horus to fight him in the universal combat scene.
+        /// </summary>
+        [MenuItem("2CT/Add Horus (Boss 4)", priority = 6)]
+        public static void AddHorus()
+        {
+            var created = new List<string>();
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                EnsureFolder(Root + "/Patterns");
+                EnsureFolder(Root + "/Bosses");
+                var patterns = new Dictionary<string, BulletPatternSO>();
+                foreach (var name in HorusPatternNames)
+                {
+                    string path = $"{Root}/Patterns/{name}.asset";
+                    var p = AssetDatabase.LoadAssetAtPath<BulletPatternSO>(path);
+                    if (p == null)                                     // create only if missing (preserve tuning)
+                    {
+                        p = ScriptableObject.CreateInstance<BulletPatternSO>();
+                        AssetDatabase.CreateAsset(p, path);
+                        ConfigureHorusPattern(name, p);
+                        EditorUtility.SetDirty(p);
+                        created.Add(name);
+                    }
+                    patterns[name] = p;
+                }
+
+                string bossPath = $"{Root}/Bosses/Boss_Horus.asset";
+                var boss = AssetDatabase.LoadAssetAtPath<BossData>(bossPath);
+                if (boss == null)
+                {
+                    boss = ScriptableObject.CreateInstance<BossData>();
+                    AssetDatabase.CreateAsset(boss, bossPath);
+                    boss.bossName = "Horus";
+                    boss.maxHP = 140;
+                    boss.introLines = new List<DialogueLine>
+                    {
+                        new DialogueLine { speaker = "Horus", text = "You'll not take my apple — nor the divine knowledge within!", autoAdvanceSeconds = 3f },
+                        new DialogueLine { speaker = "Horus", text = "Ride, thieves! If you can!", autoAdvanceSeconds = 2f },
+                    };
+                    boss.defeatLines = new List<DialogueLine>
+                    {
+                        new DialogueLine { speaker = "Horus", text = "The knowledge... was never mine to hoard...", autoAdvanceSeconds = 3f },
+                    };
+                    boss.phases = new List<BossPhase>
+                    {
+                        new BossPhase { phaseName = "Phase 1", enterAtHealthFraction = 1f,
+                            attackRotation = new List<BulletPatternSO> {
+                                patterns["Pattern_Horus_AppleChuck"], patterns["Pattern_Horus_HorseRace"],
+                                patterns["Pattern_Horus_JointRider"] },
+                            transitionLines = new List<DialogueLine>() },
+                        new BossPhase { phaseName = "Phase 2", enterAtHealthFraction = 0.5f,
+                            attackRotation = new List<BulletPatternSO> {
+                                patterns["Pattern_Horus_ExplosiveApples"], patterns["Pattern_Horus_JointRiderHard"] },
+                            transitionLines = new List<DialogueLine> { new DialogueLine { speaker = "Horus", text = "Then taste the orchard's WRATH!", autoAdvanceSeconds = 2f } } },
+                    };
+                    EditorUtility.SetDirty(boss);
+                    created.Add("Boss_Horus");
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+            RebuildRegistry();
+            EditorUtility.DisplayDialog("2CT",
+                (created.Count == 0 ? "Horus + patterns already existed (left as-is)." : "Created: " + string.Join(", ", created)) +
+                "\n\nRegistry rebuilt. Set a combat trigger's 'Boss To Fight' to Boss_Horus. Joint Horse Rider switches the box into ride mode (press W to jump; hold for a higher jump). (No art yet — assign BossData.sprite + the apple/horse/obstacle sprites on each pattern's emitter when ready.)",
+                "OK");
+        }
+
+        // =====================================================================
         //  Cards
         // =====================================================================
         /// <summary>The standard opening deck for every player: N copies of each Neutral starter.</summary>

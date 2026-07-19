@@ -30,9 +30,12 @@ MonoBehaviour:
         fillSpeedup: 0.2
         fillFloor: 0.4
         windupDuration: 0.3
-        spinSpeedDeg: 10
+        spinSpeedMin: 10
+        spinSpeedMax: 40
         homingAccel: 8
-        homingMaxSpeed: 4
+        homingMaxSpeedMin: 3
+        homingMaxSpeedMax: 5
+        spawnInterval: 4
         armLength: 2
         crosshairSize: 0.5
         thickness: 0.25

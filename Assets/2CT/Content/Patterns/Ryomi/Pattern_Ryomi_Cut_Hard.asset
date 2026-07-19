@@ -10,23 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06886d9e18510ee4c81a292079c26cb3, type: 3}
-  m_Name: Pattern_Ryomi_Ricochet
+  m_Name: Pattern_Ryomi_Cut_Hard
   m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BulletPatternSO
   duration: 8
   emitters:
-  - rid: 7301862606315454616
+  - rid: 7301862606315454617
   references:
     version: 2
     RefIds:
-    - rid: 7301862606315454616
-      type: {class: RicochetEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
+    - rid: 7301862606315454617
+      type: {class: SlidingCutEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
       data:
         startTime: 0
         duration: 8
-        sprite: {fileID: -2346302928887187388, guid: ae4e8b02ffa42ca49a624da91a5280bd, type: 3}
-        interval: 2
+        sprite: {fileID: 0}
+        interval: 1.5
+        intervalDecrease: 0.05
+        intervalFloor: 0.8
         speed: 4
-        bulletLifetime: 10
-        bulletRadius: 0.3
-        damage: 8
-        color: {r: 1, g: 0.7, b: 0.4, a: 1}
+        slashHalfWidth: 0.15
+        slashHalfHeight: 1
+        damage: 10
+        afterImageInterval: 0.05
+        flipXOnSpawn: 1
+        flipYOnSpawn: 0
+        color: {r: 0.85, g: 0.9, b: 1, a: 1}

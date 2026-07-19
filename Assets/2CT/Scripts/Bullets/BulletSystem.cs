@@ -36,9 +36,38 @@ namespace TwoCT.Bullets
         private Vector2 _muzzle;
         private PatternContext _ctx;
         private int _epoch;          // bumped each pattern so stale cross-client destroy messages are ignored
+        private Bullet _waterZone;   // Marnu: the single persistent rising-water zone (spawned on the first Water cast)
 
         /// <summary>The world-space defend box, used by curving bubbles to know where the walls are.</summary>
         public Rect ArenaBounds => arena != null ? arena.Bounds : _ctx.arenaBounds;
+
+        /// <summary>The local player's dodge icon (for spell-page / firebomb proximity detonation).</summary>
+        public PlayerDodgeIcon LocalIcon => arena != null ? arena.LocalIcon : null;
+
+        /// <summary>Is a world point inside the defend box? (Marnu pages detonate on leaving it.)</summary>
+        public bool InArena(Vector2 p) => ArenaBounds.Contains(p);
+
+        /// <summary>Marnu's accumulated water level (fraction of the box height, 0–0.5).</summary>
+        public float WaterLevel01 => arena != null ? arena.WaterLevel01 : 0f;
+
+        /// <summary>The camera's world-space view rect (Marnu wind streaks blow across the whole screen).
+        /// Falls back to the arena bounds plus a margin when there's no orthographic camera.</summary>
+        public Rect ViewBounds
+        {
+            get
+            {
+                var cam = Camera.main;
+                if (cam != null && cam.orthographic)
+                {
+                    float h = cam.orthographicSize * 2f;
+                    float w = h * cam.aspect;
+                    Vector2 c = cam.transform.position;
+                    return new Rect(c.x - w * 0.5f, c.y - h * 0.5f, w, h);
+                }
+                Rect b = ArenaBounds;
+                return Rect.MinMaxRect(b.xMin - 6f, b.yMin - 4f, b.xMax + 6f, b.yMax + 4f);
+            }
+        }
 
         private void Awake()
         {
@@ -129,7 +158,8 @@ namespace TwoCT.Bullets
             _schedule = null;
             for (int i = _active.Count - 1; i >= 0; i--) _active[i].Despawn();
             _active.Clear();
-            if (arena != null) arena.ResetLasso();   // undo any Lasso arena drag
+            _waterZone = null;
+            if (arena != null) { arena.ResetLasso(); arena.ResetWater(); arena.ResetWind(); arena.ResetRide(); }   // undo Lasso drag + Marnu water/wind + Horus ride
         }
 
         /// <summary>Ryomi's Lasso: drag the defend arena vertically by <paramref name="offset"/> from
@@ -141,6 +171,40 @@ namespace TwoCT.Bullets
 
         /// <summary>Clamp a point inside the defend box (crosshair explosions spawn within the battlefield).</summary>
         public Vector2 ClampToArena(Vector2 p) => arena != null ? arena.Clamp(p) : p;
+
+        /// <summary>Marnu's Water spell: raise the accumulated water level and ensure the single rising-water
+        /// zone bullet exists (it renders + hit-tests the bottom fraction of the box for the whole round).</summary>
+        public void RaiseWater(float rise, float max, float riseSeconds, int damage, Color color, Sprite sprite)
+        {
+            if (arena == null) return;
+            arena.RaiseWater(rise, max, riseSeconds);
+            if (_waterZone == null || !_waterZone.Active)
+            {
+                var d = new BulletSpawnData
+                {
+                    behavior = BulletBehavior.Water, hitShape = BulletHitShape.Box,
+                    damage = damage, color = color, sprite = sprite, visualSize = 1f,
+                    boxHalfExtents = new Vector2(0.1f, 0.1f), lifetime = 9999f,
+                };
+                var b = Rent();
+                b.Spawn(d, arena.Center);
+                b.Id = -1;
+                _active.Add(b);
+                _waterZone = b;
+            }
+        }
+
+        /// <summary>Marnu's Wind spell: set the horizontal force pulling the player icons (cleared to zero
+        /// when the wind controller expires).</summary>
+        public void SetWind(Vector2 force) { if (arena != null) arena.SetWind(force); }
+
+        /// <summary>Horus's Joint Horse Rider: switch the defend arena in/out of ride mode (jump physics vs
+        /// free movement). Driven each frame by the HorseRide controller bullet.</summary>
+        public void SetRideMode(bool on, float gravity, float jumpVel, float maxHold, float lowG, Sprite horse,
+                                float extraHeight, float speedMul)
+        {
+            if (arena != null) arena.SetRideMode(on, gravity, jumpVel, maxHold, lowG, horse, extraHeight, speedMul);
+        }
 
         private void Update()
         {
@@ -168,8 +232,14 @@ namespace TwoCT.Bullets
                 var b = _active[i];
                 bool alive = b.Tick(dt, this);
 
-                // Let a bullet spawn one child this frame (Tracking Cut detonation cross, Cut afterimage).
-                if (b.HasPendingChild) { SpawnBullet(b.PendingChild, b.PendingChildPos, -1); b.ClearPendingChild(); }
+                // Let a bullet spawn its queued children this frame (Tracking Cut detonation cross, Cut
+                // afterimage, Marnu spell-page reveal — which can be several, e.g. Mana's 5-shot fan).
+                if (b.HasPendingChild)
+                {
+                    var kids = b.PendingChildren;
+                    for (int k = 0; k < kids.Count; k++) SpawnBullet(kids[k].data, kids[k].pos, -1);
+                    b.ClearPendingChild();
+                }
 
                 if (alive && damageActive && b.CurrentDamage > 0 &&
                     localIcon != null && !localIcon.IsInvincible && !localIcon.IsDead)

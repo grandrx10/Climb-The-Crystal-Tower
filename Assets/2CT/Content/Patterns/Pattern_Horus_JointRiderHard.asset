@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06886d9e18510ee4c81a292079c26cb3, type: 3}
+  m_Name: Pattern_Horus_JointRiderHard
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BulletPatternSO
+  duration: 20
+  emitters:
+  - rid: 7301862606315454706
+  references:
+    version: 2
+    RefIds:
+    - rid: 7301862606315454706
+      type: {class: JointHorseRiderEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
+      data:
+        startTime: 0
+        duration: 20
+        sprite: {fileID: 0}
+        rideGravity: 20
+        rideJumpVelocity: 8
+        rideMaxJumpHold: 0.25
+        rideLowGravityFactor: 0.45
+        horseSprite: {fileID: 0}
+        arenaExtraHeight: 2
+        rideSpeedMultiplier: 1.5
+        minInterval: 2
+        maxInterval: 3
+        scrollSpeed: 5
+        obstacleWidth: 0.5
+        minHeight: 0.5
+        maxHeight: 2.6
+        obstacleDamage: 8
+        offMargin: 1.2
+        obstacleSprite: {fileID: 2658202844319725607, guid: 9ea19e8bd85c6ae418bcb267e7d12040, type: 3}
+        obstacleColor: {r: 0.4, g: 0.3, b: 0.2, a: 1}
+        hardMode: 1
+        topMinHeight: 0.4
+        topMaxHeight: 1
+        minGap: 1.2

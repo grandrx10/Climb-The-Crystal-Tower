@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06886d9e18510ee4c81a292079c26cb3, type: 3}
+  m_Name: Pattern_Ryomi_Ricochet_Hard
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BulletPatternSO
+  duration: 8
+  emitters:
+  - rid: 7301862606315454616
+  references:
+    version: 2
+    RefIds:
+    - rid: 7301862606315454616
+      type: {class: RicochetEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
+      data:
+        startTime: 0
+        duration: 8
+        sprite: {fileID: -2346302928887187388, guid: ae4e8b02ffa42ca49a624da91a5280bd, type: 3}
+        interval: 1.5
+        speed: 4
+        bulletLifetime: 10
+        bulletRadius: 0.3
+        damage: 8
+        flipXOnSpawn: 1
+        flipYOnSpawn: 0
+        color: {r: 1, g: 0.7, b: 0.4, a: 1}

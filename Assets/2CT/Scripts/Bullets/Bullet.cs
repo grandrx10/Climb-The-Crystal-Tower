@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TwoCT.Core;
 using UnityEngine;
 
@@ -47,18 +48,26 @@ namespace TwoCT.Bullets
         private float _fillDur;                // TrackingCut: current fill duration (shrinks each cycle)
         private bool _winding;                 // TrackingCut: in the pre-shot windup (frozen + white)?
         private float _windupClock;            // TrackingCut: time spent in the windup
-        private float _afterTimer;             // SlidingCut: time since the last afterimage drop
+        private float _afterTimer;             // SlidingCut: time since the last afterimage drop (also Wind streak timer)
 
-        // One child a bullet can ask the system to spawn this frame (TrackingCut detonation cross,
-        // SlidingCut afterimage). Read + cleared by BulletSystem after Tick.
-        private bool _pendingChild;
-        private BulletSpawnData _childData;
-        private Vector2 _childPos;
-        public bool HasPendingChild => _pendingChild;
-        public BulletSpawnData PendingChild => _childData;
-        public Vector2 PendingChildPos => _childPos;
-        public void ClearPendingChild() => _pendingChild = false;
-        private void RequestChild(in BulletSpawnData d, Vector2 pos) { _childData = d; _childPos = pos; _pendingChild = true; }
+        // ---- Marnu (boss 3) runtime state ----------------------------------
+        private bool _detonating;              // SpellPage: playing the 0.3s squash/fade detonation
+        private float _detonateClock;          // SpellPage: time into the detonation
+        private bool _pageEntered;             // SpellPage (launched) / Firebomb: has it been inside the box yet? (so one that starts outside doesn't detonate on frame 1)
+        private float _insideClock;            // Firebomb: time spent inside the box (wall bursts arm only after a short grace past entry)
+        private Vector2 _vel;                  // GravityApple: current velocity (integrates gravity)
+        private Transform _bolt;               // Lightning: the tall bolt sprite (child; bottom pinned at the strike point)
+        private SpriteRenderer _boltSr;
+
+        // Children a bullet asks the system to spawn this frame (TrackingCut detonation cross, SlidingCut
+        // afterimage, Marnu spell-page detonation — which can reveal several, e.g. Mana's 5-shot fan).
+        // Read + cleared by BulletSystem after Tick.
+        public struct PendingSpawn { public BulletSpawnData data; public Vector2 pos; }
+        private readonly List<PendingSpawn> _pendingChildren = new List<PendingSpawn>();
+        public bool HasPendingChild => _pendingChildren.Count > 0;
+        public IReadOnlyList<PendingSpawn> PendingChildren => _pendingChildren;
+        public void ClearPendingChild() => _pendingChildren.Clear();
+        private void RequestChild(in BulletSpawnData d, Vector2 pos) => _pendingChildren.Add(new PendingSpawn { data = d, pos = pos });
 
         private bool IsCrossShape => Data.hitShape == BulletHitShape.Cross;
 
@@ -88,7 +97,13 @@ namespace TwoCT.Bullets
             _winding = false;
             _windupClock = 0f;
             _afterTimer = 0f;
-            _pendingChild = false;
+            _detonating = false;
+            _detonateClock = 0f;
+            _pageEntered = false;
+            _insideClock = 0f;
+            _vel = data.velocity;
+            _pendingChildren.Clear();
+            if (_bolt != null) _bolt.gameObject.SetActive(false);
             if (_barH != null) _barH.gameObject.SetActive(false);
             if (_barV != null) _barV.gameObject.SetActive(false);
             if (_crosshair != null) _crosshair.gameObject.SetActive(false);
@@ -107,9 +122,17 @@ namespace TwoCT.Bullets
                 // Real art shows its own colours (rendered white, tint only carries alpha for fades);
                 // the placeholder uses the flat `color`. Box slashes fall back to a SQUARE (not the
                 // circle) so an untextured Cut renders as a rectangle rather than an ellipse.
-                Sprite fallback = data.hitShape == BulletHitShape.Box ? PlayerDodgeIcon.MakeSquareSprite() : _defaultSprite;
+                // A spell page is a rectangle too, so it falls back to the square (not the circle) placeholder.
+                bool wantSquare = data.hitShape == BulletHitShape.Box || data.behavior == BulletBehavior.SpellPage;
+                Sprite fallback = wantSquare ? PlayerDodgeIcon.MakeSquareSprite() : _defaultSprite;
                 _sr.sprite = data.sprite != null ? data.sprite : fallback;
                 _sr.color = data.sprite != null ? Color.white : data.color;
+                _sr.flipX = data.flipXOnSpawn; _sr.flipY = data.flipYOnSpawn;   // base flip (also clears pooled state)
+                // Occlusion: Horse Race apples/horses + ride obstacles render only inside the arena mask so
+                // they slide INTO frame rather than popping in at their off-screen spawn point.
+                _sr.maskInteraction = data.maskInside ? SpriteMaskInteraction.VisibleInsideMask
+                                    : data.maskOutside ? SpriteMaskInteraction.VisibleOutsideMask
+                                    : SpriteMaskInteraction.None;
                 _sr.enabled = true;
             }
             // Cross slashes + crosshairs draw via dedicated children (bars / crosshair marker), NOT the
@@ -126,7 +149,9 @@ namespace TwoCT.Bullets
                 ApplyBoxVisual(1f);
             else
                 transform.localScale = Vector3.one;
-            if (data.behavior == BulletBehavior.Lasso && _sr != null) _sr.enabled = false;   // invisible controller
+            // Invisible controllers (drive the arena / environment, draw nothing themselves).
+            if ((data.behavior == BulletBehavior.Lasso || data.behavior == BulletBehavior.Wind
+                 || data.behavior == BulletBehavior.HorseRide) && _sr != null) _sr.enabled = false;
             UpdateHitboxOverlay();
             gameObject.SetActive(true);
         }
@@ -140,8 +165,9 @@ namespace TwoCT.Bullets
             if (_crosshair != null) _crosshair.gameObject.SetActive(false);
             if (_ropeTop != null) _ropeTop.gameObject.SetActive(false);
             if (_ropeBottom != null) _ropeBottom.gameObject.SetActive(false);
+            if (_bolt != null) _bolt.gameObject.SetActive(false);
             if (_hitbox != null && _hitbox.gameObject.activeSelf) _hitbox.gameObject.SetActive(false);
-            _pendingChild = false;
+            _pendingChildren.Clear();
             gameObject.SetActive(false);
         }
 
@@ -164,6 +190,14 @@ namespace TwoCT.Bullets
                 case BulletBehavior.Ricochet:       alive = TickRicochet(dt, sys); break;
                 case BulletBehavior.TrackingCut:    alive = TickTrackingCut(dt, sys); break;
                 case BulletBehavior.Lasso:          alive = TickLasso(dt, sys); break;
+                case BulletBehavior.SpellPage:      alive = TickSpellPage(dt, sys); break;
+                case BulletBehavior.Firebomb:       alive = TickFirebomb(dt, sys); break;
+                case BulletBehavior.Lightning:      alive = TickLightning(dt); break;
+                case BulletBehavior.EarthPillar:    alive = TickEarthPillar(dt, sys); break;
+                case BulletBehavior.Wind:           alive = TickWind(dt, sys); break;
+                case BulletBehavior.Water:          alive = TickWater(dt, sys); break;
+                case BulletBehavior.GravityApple:   alive = TickGravityApple(dt, sys); break;
+                case BulletBehavior.HorseRide:      alive = TickHorseRide(dt, sys); break;
                 default:                            alive = TickLinear(dt, sys); break;
             }
             if (alive) UpdateHitboxOverlay();   // track the live radius (bubbles grow/explode)
@@ -175,6 +209,11 @@ namespace TwoCT.Bullets
         private bool TickLinear(float dt, BulletSystem sys)
         {
             transform.position += (Vector3)(Data.velocity * dt);
+            if (Data.spinSpeedDeg != 0f)                       // rolling/tumbling (Horse Race apples)
+                transform.Rotate(0f, 0f, Data.spinSpeedDeg * dt);
+            else if (Data.wobbleDeg != 0f)                     // walk-wobble (Horse Race horses), like free roam
+                transform.rotation = Quaternion.Euler(0f, 0f,
+                    Data.rotationDeg + Mathf.Sin(Age * Data.wobbleFreq) * Data.wobbleDeg);
             if (Age >= Data.lifetime) return false;
             return !sys.IsCulled(transform.position);
         }
@@ -367,26 +406,12 @@ namespace TwoCT.Bullets
             else if (p.y + r > b.yMax && v.y > 0) { p.y = b.yMax - r; v.y = -v.y; }
             Data.velocity = v;
             transform.position = p;
-            // Face the travel direction (visual only — the circle hitbox is rotation-invariant).
+
+            // Always rotate to face the travel direction (visual only — circle hitbox is rotation-
+            // invariant). atan2 assumes a right-facing sprite, so a left-facing one wants Flip X On Spawn.
             if (v.sqrMagnitude > 0.0001f)
                 transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg);
             CurrentDamage = Data.damage;
-
-            // Short afterimage trail behind the bullet.
-            _afterTimer += dt;
-            if (Data.afterImageInterval > 0f && _afterTimer >= Data.afterImageInterval)
-            {
-                _afterTimer = 0f;
-                var ai = Data;
-                ai.behavior = BulletBehavior.AfterImage;
-                ai.damage = 0;
-                ai.hitShape = BulletHitShape.Circle;   // circle trail (matches the bullet)
-                ai.boxHalfExtents = Vector2.zero;
-                ai.velocity = Vector2.zero;
-                ai.rotationDeg = transform.eulerAngles.z;   // trail faces the same way
-                ai.lifetime = Mathf.Max(0.1f, Data.afterImageInterval * 4f);
-                RequestChild(ai, transform.position);
-            }
             return Age < Data.lifetime;
         }
 
@@ -484,6 +509,459 @@ namespace TwoCT.Bullets
             rope.transform.position = new Vector3(x, (edgeY + anchorY) * 0.5f, 0f);   // world-space
             rope.transform.rotation = Quaternion.identity;
             rope.transform.localScale = new Vector3(width, h, 1f);
+        }
+
+        // ---- Marnu (boss 3) behaviours -------------------------------------
+
+        // A "spell page": a 1:1 square that flies out (rotating), holds, then either launches as a
+        // projectile (Targeted / Sea of Spells) or detonates in place (Crazy / Surround). Detonation is a
+        // 0.3s squash/stretch + fade, after which the page reveals its spell as child bullet(s).
+        private bool TickSpellPage(float dt, BulletSystem sys)
+        {
+            CurrentDamage = Data.pageDamage;   // the page's rotating box hitbox hurts on contact; its detonation then reveals the spell
+            if (_detonating) return TickPageDetonation(dt, sys);
+
+            float moveEnd = Mathf.Max(0f, Data.pageMoveTime);
+            float holdEnd = moveEnd + Mathf.Max(0f, Data.pageHoldTime);
+
+            if (Age < moveEnd)                                    // fly from spawn -> staging point
+            {
+                float p = moveEnd > 0f ? Age / moveEnd : 1f;
+                transform.position = Vector2.Lerp(_spawnPos, Data.stagePoint, Mathf.Clamp01(p));
+                transform.Rotate(0f, 0f, Data.spinSpeedDeg * dt);
+                RenderPage(Data.boxHalfExtents.x, Data.boxHalfExtents.y, 1f);
+                return true;
+            }
+            if (Age < holdEnd)                                    // held at the staging point, still spinning
+            {
+                if (Data.orbitDegPerSec != 0f)                    // Surround: the whole ring circles the battlefield centre
+                {
+                    float a = (Data.orbitStartDeg + Data.orbitDegPerSec * Age) * Mathf.Deg2Rad;
+                    transform.position = Data.orbitCenter
+                        + new Vector2(Mathf.Cos(a) * Data.orbitRadii.x, Mathf.Sin(a) * Data.orbitRadii.y);
+                }
+                else transform.position = Data.stagePoint;
+                transform.Rotate(0f, 0f, Data.spinSpeedDeg * dt);
+                RenderPage(Data.boxHalfExtents.x, Data.boxHalfExtents.y, 1f);
+                return true;
+            }
+
+            if (Data.pageLaunches)                                // Targeted / Sea: fly until it leaves the box or strikes you
+            {
+                if (!_launched)
+                {
+                    _launched = true;
+                    if (Data.pageAimAtPlayer)
+                    {
+                        Vector2 target = sys.ResolveTargetPosition(Data.targetSelect, transform.position);
+                        Vector2 d = target - (Vector2)transform.position;
+                        _flyDir = d.sqrMagnitude > 0.0001f ? d.normalized : Vector2.left;
+                    }
+                    else _flyDir = Data.velocity.sqrMagnitude > 0.0001f ? Data.velocity.normalized : Vector2.up;
+                }
+                transform.position += (Vector3)(_flyDir * (Mathf.Max(0.1f, Data.pageLaunchSpeed) * dt));
+                transform.Rotate(0f, 0f, Data.spinSpeedDeg * dt);
+                RenderPage(Data.boxHalfExtents.x, Data.boxHalfExtents.y, 1f);
+                // Detonate on leaving the box (only once it has actually entered — Sea pages start below
+                // the floor) or on striking the local player.
+                bool inside = sys.InArena(transform.position);
+                if (inside) _pageEntered = true;
+                if ((_pageEntered && !inside) || HitsLocalIcon(sys, Data.boxHalfExtents.x))
+                    BeginPageDetonation();
+                return true;
+            }
+
+            BeginPageDetonation();                                // Crazy / Surround: detonate where it sits
+            return true;
+        }
+
+        private void BeginPageDetonation() { _detonating = true; _detonateClock = 0f; }
+
+        private bool TickPageDetonation(float dt, BulletSystem sys)
+        {
+            CurrentDamage = 0;   // the stretching page is harmless — only the revealed spell hurts
+            _detonateClock += dt;
+            float dur = Mathf.Max(0.05f, Data.pageDetonateTime);
+            float p = Mathf.Clamp01(_detonateClock / dur);
+            float squash = 1f + 0.1f * Mathf.Sin(p * Mathf.PI);            // just a little squeeze & stretch, then ease back
+            RenderPage(Data.boxHalfExtents.x / squash, Data.boxHalfExtents.y * squash, 1f - p);   // fade out fast
+            if (p >= 1f) { SpawnSpellEffect(sys); return false; }          // reveal the spell; page is gone
+            return true;
+        }
+
+        // Draw the page rectangle at the given half-size + alpha, tinted to its spell colour.
+        private void RenderPage(float halfW, float halfH, float alpha)
+        {
+            if (_sr == null) return;
+            _sr.enabled = true;
+            Vector2 sz = _sr.sprite != null ? (Vector2)_sr.sprite.bounds.size : Vector2.one;
+            float sx = sz.x > 0.0001f ? (halfW * 2f) / sz.x : halfW * 2f;
+            float sy = sz.y > 0.0001f ? (halfH * 2f) / sz.y : halfH * 2f;
+            transform.localScale = new Vector3(sx, sy, 1f);
+            Data.boxHalfExtents = new Vector2(halfW, halfH);    // keep the box hitbox matched to the drawn rectangle (incl. the squash)
+            Color c = Data.color; c.a = alpha; _sr.color = c;   // the spell always tints the page, art or not
+        }
+
+        // Reveal the page's spell as runtime child bullet(s) / an environment change at the page position.
+        private void SpawnSpellEffect(BulletSystem sys)
+        {
+            Vector2 at = transform.position;
+            switch (Data.spell)
+            {
+                case SpellType.Firebomb:
+                    RequestChild(BuildFirebomb(sys, at), at);
+                    break;
+                case SpellType.Lightning:
+                {
+                    Vector2 p = Data.effectPoint != Vector2.zero ? Data.effectPoint : sys.ClampToArena(at);
+                    RequestChild(BuildLightning(p), p);
+                    break;
+                }
+                case SpellType.Water:
+                    sys.RaiseWater(Data.waterRise, Data.waterMax, Data.waterRiseSeconds, Data.damage, Data.color, Data.effectSprite);
+                    break;
+                case SpellType.Earth:
+                {
+                    Rect b = sys.ArenaBounds;
+                    // The pillar rises at the pre-rolled random x, not where the page detonated.
+                    float x = Data.effectPoint != Vector2.zero ? Data.effectPoint.x : at.x;
+                    Vector2 p = new Vector2(Mathf.Clamp(x, b.xMin, b.xMax), b.yMin);
+                    RequestChild(BuildEarthPillar(p), p);
+                    break;
+                }
+                case SpellType.Wind:
+                    RequestChild(BuildWind(), at);
+                    break;
+                case SpellType.Mana:
+                    SpawnManaFan(sys, at);
+                    break;
+            }
+        }
+
+        // Firebomb: a projectile aimed at a player that bursts into an expanding Explosion on hitting a
+        // player or the arena edge. The projectile is harmless; the burst carries the damage.
+        private bool TickFirebomb(float dt, BulletSystem sys)
+        {
+            CurrentDamage = 0;
+            transform.position += (Vector3)(Data.velocity * (Mathf.Max(0.1f, Data.projSpeed) * dt));
+            transform.Rotate(0f, 0f, Data.spinSpeedDeg * dt);   // spin in flight (visual only — circle hitbox)
+            ApplyVisual(Data.radius);
+            // Trail: drop fading afterimages behind the bomb (harmless, visual only).
+            _afterTimer += dt;
+            if (Data.afterImageInterval > 0f && _afterTimer >= Data.afterImageInterval)
+            {
+                _afterTimer = 0f;
+                var ai = Data;
+                ai.behavior = BulletBehavior.AfterImage;
+                ai.damage = 0;                          // damage 0 = never hit-tested
+                ai.hitShape = BulletHitShape.Circle;    // circle render path, sized at Spawn (no 1-frame flash)
+                ai.velocity = Vector2.zero;
+                ai.rotationDeg = transform.eulerAngles.z;   // freeze the bomb's spin angle at this instant
+                ai.lifetime = Mathf.Max(0.15f, Data.afterImageInterval * 3f);
+                RequestChild(ai, transform.position);
+            }
+            // A bomb revealed OUTSIDE the box must first ENTER it before walls can burst it, and gets a
+            // short grace after entry so the wall it just came through doesn't pop it immediately.
+            bool inside = sys.InArena(transform.position);
+            if (inside) { _pageEntered = true; _insideClock += dt; }
+            bool wallsArmed = _pageEntered && _insideClock >= 0.15f;
+            if ((wallsArmed && !inside) || HitsLocalIcon(sys, CurrentRadius) || Age >= Data.lifetime)
+            {
+                ExplodeRequested = true;   // BulletSystem spawns the shock circle from the explosion* fields
+                return false;
+            }
+            return true;
+        }
+
+        private BulletSpawnData BuildFirebomb(BulletSystem sys, Vector2 at)
+        {
+            Vector2 target = sys.ResolveTargetPosition(Data.targetSelect, at);
+            Vector2 dir = target - at; dir = dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector2.left;
+            return new BulletSpawnData
+            {
+                behavior = BulletBehavior.Firebomb, hitShape = BulletHitShape.Circle,
+                damage = 0, radius = Mathf.Max(0.1f, Data.radius), visualSize = 1f,
+                velocity = dir, projSpeed = Mathf.Max(0.1f, Data.projSpeed),
+                color = Data.color, sprite = Data.effectSprite, lifetime = 8f,
+                afterImageInterval = Data.afterImageInterval, spinSpeedDeg = Data.effectSpinDeg,
+                explosionRadius = Data.explosionRadius, explosionExpand = Data.explosionExpand,
+                explosionLifetime = Data.explosionLifetime, explosionDamage = Data.explosionDamage,
+                explosionColor = Data.explosionColor, explosionSprite = Data.explosionSprite,   // its own art, not the bomb's
+            };
+        }
+
+        // Lightning: a warning circle fades in at the strike point, then a bolt strikes for damage in a
+        // radius (the tall bolt sprite extends up above; the hit is only the bottom radius).
+        private bool TickLightning(float dt)
+        {
+            float warn = Mathf.Max(0.01f, Data.warningDuration);
+            float strike = Mathf.Max(0.05f, Data.strikeDuration);
+            CurrentRadius = Data.strikeRadius;
+            if (Age < warn)                                   // warning: harmless, grows 0 -> full radius while fading 0.25 -> 1
+            {
+                CurrentDamage = 0;
+                if (_bolt != null && _bolt.gameObject.activeSelf) _bolt.gameObject.SetActive(false);
+                if (_sr != null) _sr.enabled = true;
+                float t = Mathf.Clamp01(Age / warn);
+                ApplyVisual(Data.strikeRadius * t);
+                SetAlpha(0.25f + 0.75f * t);
+                return true;
+            }
+            if (Age < warn + strike)                          // strike: damage in the bottom radius
+            {
+                CurrentDamage = Data.damage;
+                if (_sr != null) _sr.enabled = false;         // hide the marker; the bolt sprite is the visual
+                ShowBolt(1f);
+                return true;
+            }
+            float fade = Mathf.Max(0f, Data.fadeDuration);    // afterglow: the bolt fades out, harmless
+            if (Age < warn + strike + fade)
+            {
+                CurrentDamage = 0;
+                if (_sr != null) _sr.enabled = false;
+                ShowBolt(1f - (Age - warn - strike) / Mathf.Max(0.0001f, fade));
+                return true;
+            }
+            return false;
+        }
+
+        private BulletSpawnData BuildLightning(Vector2 p)
+        {
+            return new BulletSpawnData
+            {
+                behavior = BulletBehavior.Lightning, hitShape = BulletHitShape.Circle,
+                damage = Data.damage, radius = Data.strikeRadius, visualSize = 1f,
+                strikeRadius = Data.strikeRadius, warningDuration = Data.warningDuration,
+                strikeDuration = Data.strikeDuration, strikeHeightMul = Data.strikeHeightMul,
+                fadeDuration = Data.fadeDuration,
+                color = Data.color, effectSprite = Data.effectSprite,
+                lifetime = Data.warningDuration + Data.strikeDuration + Data.fadeDuration + 0.5f,
+            };
+        }
+
+        // The tall bolt sprite: bottom pinned at the strike point, extending up with its aspect preserved.
+        private void ShowBolt(float alpha)
+        {
+            transform.localScale = Vector3.one;               // so the child's world size isn't scaled by the marker
+            transform.rotation = Quaternion.identity;
+            if (_bolt == null)
+            {
+                var go = new GameObject("Bolt");
+                go.transform.SetParent(transform, false);
+                _boltSr = go.AddComponent<SpriteRenderer>();
+                _boltSr.sortingOrder = 51;
+                _bolt = go.transform;
+            }
+            Sprite spr = Data.effectSprite != null ? Data.effectSprite : PlayerDodgeIcon.MakeSquareSprite();
+            _boltSr.sprite = spr;
+            Color bc = Data.effectSprite != null ? Color.white : Data.color;
+            bc.a = Mathf.Clamp01(alpha);
+            _boltSr.color = bc;
+            _bolt.gameObject.SetActive(true);
+
+            float width = Mathf.Max(0.05f, Data.strikeRadius * 2f);
+            Vector2 sz = spr.bounds.size;
+            // Preserve the sprite's aspect: fit WIDTH to the strike diameter; height follows. Without art,
+            // use strikeHeightMul as the aspect so the placeholder still reaches up above the strike.
+            float aspect = (Data.effectSprite != null && sz.x > 0.0001f) ? sz.y / sz.x : Mathf.Max(1f, Data.strikeHeightMul);
+            float height = width * aspect;
+            _bolt.localScale = new Vector3(sz.x > 0.0001f ? width / sz.x : width,
+                                           sz.y > 0.0001f ? height / sz.y : height, 1f);
+            _bolt.localPosition = new Vector3(0f, height * 0.5f, 0f);   // bottom sits at the strike point
+            _bolt.localRotation = Quaternion.identity;
+        }
+
+        // Earth pillar: a tall rock rectangle rises from below the floor to the ceiling, then sinks out.
+        private bool TickEarthPillar(float dt, BulletSystem sys)
+        {
+            Rect b = sys.ArenaBounds;
+            float halfH = Mathf.Max(0.05f, Data.boxHalfExtents.y);
+            float topCenter = b.yMax - halfH;      // centre y where the pillar's top touches the ceiling
+            float startCenter = b.yMin - halfH;    // centre y where the pillar's top is at the floor
+            Vector2 pos = transform.position;
+            if (!_launched) { _launched = true; pos.y = startCenter; _homingVel = Vector2.up; }
+            pos.y += _homingVel.y * Data.riseSpeed * dt;
+            if (_homingVel.y > 0f && pos.y >= topCenter) { pos.y = topCenter; _homingVel = Vector2.down; }
+            transform.position = pos;
+            CurrentDamage = Data.damage;
+            ApplyBoxVisual(1f);
+            if (_homingVel.y < 0f && pos.y <= startCenter - halfH) return false;   // fully sunk out
+            return Age < Data.lifetime;
+        }
+
+        private BulletSpawnData BuildEarthPillar(Vector2 floorPoint)
+        {
+            return new BulletSpawnData
+            {
+                behavior = BulletBehavior.EarthPillar, hitShape = BulletHitShape.Box,
+                damage = Data.damage, boxHalfExtents = Data.effectHalfExtents,
+                riseSpeed = Mathf.Max(0.1f, Data.riseSpeed), visualSize = 1f,
+                color = Data.color, sprite = Data.effectSprite, lifetime = 30f,
+                maskInside = true,   // occluded to the battlefield: no pillar poking out above/below the box
+            };
+        }
+
+        // Wind: an invisible controller that blows a horizontal force on the player icons + spawns drifting
+        // streak visuals for its lifetime, then clears the force.
+        private bool TickWind(float dt, BulletSystem sys)
+        {
+            CurrentDamage = 0;
+            sys.SetWind(new Vector2(Data.windDir * Data.windStrength, 0f));
+            _afterTimer += dt;
+            if (Data.windStreakInterval > 0f && _afterTimer >= Data.windStreakInterval)
+            {
+                _afterTimer = 0f;
+                SpawnWindStreak(sys);
+            }
+            if (Age >= Data.lifetime) { sys.SetWind(Vector2.zero); return false; }
+            return true;
+        }
+
+        private BulletSpawnData BuildWind()
+        {
+            return new BulletSpawnData
+            {
+                behavior = BulletBehavior.Wind, hitShape = BulletHitShape.None,
+                windStrength = Data.windStrength, windDir = Data.windDir >= 0f ? 1f : -1f,
+                windStreakInterval = Data.windStreakInterval,
+                color = Data.color, lifetime = Mathf.Max(0.5f, Data.windDuration),
+            };
+        }
+
+        private void SpawnWindStreak(BulletSystem sys)
+        {
+            // Streaks blow across the WHOLE screen but are stencil-hidden inside the battlefield
+            // (VisibleOutsideMask vs the arena mask), so the box itself stays visually calm.
+            Rect v = sys.ViewBounds;
+            float y = Random.Range(v.yMin, v.yMax);              // visual only -> runtime Random is fine (not hit-tested)
+            float x = Data.windDir > 0f ? v.xMin - 0.6f : v.xMax + 0.6f;
+            float speed = Mathf.Abs(Data.windStrength) * 0.6f + 3f;
+            var s = new BulletSpawnData
+            {
+                behavior = BulletBehavior.Linear, hitShape = BulletHitShape.Box, damage = 0,
+                boxHalfExtents = new Vector2(0.5f, 0.04f), visualSize = 1f,
+                velocity = new Vector2(Data.windDir * speed, 0f),
+                color = new Color(1f, 1f, 1f, 0.35f),
+                lifetime = (v.width + 1.2f) / speed + 0.5f,      // long enough to cross the view
+                maskOutside = true,
+            };
+            RequestChild(s, new Vector2(x, y));
+        }
+
+        // Mana: a fan of straight projectiles (0, ±step, ±2·step …) whose centre is aimed at a player.
+        private void SpawnManaFan(BulletSystem sys, Vector2 at)
+        {
+            Vector2 target = sys.ResolveTargetPosition(Data.targetSelect, at);
+            Vector2 baseDir = target - at; baseDir = baseDir.sqrMagnitude > 0.0001f ? baseDir.normalized : Vector2.left;
+            float baseAng = Mathf.Atan2(baseDir.y, baseDir.x) * Mathf.Rad2Deg;
+            int n = Mathf.Max(1, Data.manaCount);
+            float step = Data.manaSpreadStepDeg;
+            for (int i = 0; i < n; i++)
+            {
+                float ang = baseAng;
+                if (i > 0) { int k = (i + 1) / 2; float sign = (i % 2 == 1) ? 1f : -1f; ang += sign * k * step; }
+                float r = ang * Mathf.Deg2Rad;
+                Vector2 dir = new Vector2(Mathf.Cos(r), Mathf.Sin(r));
+                var m = new BulletSpawnData
+                {
+                    behavior = BulletBehavior.Linear, hitShape = BulletHitShape.Box, damage = Data.damage,
+                    velocity = dir * Mathf.Max(0.1f, Data.projSpeed),
+                    boxHalfExtents = Data.effectHalfExtents, visualSize = 1f,   // x = half-length along travel, y = half-thickness
+                    // The 64×16 bolt art points LEFT: flipX turns it right-facing, then rotate to travel.
+                    rotationDeg = ang, flipXOnSpawn = true,
+                    color = Data.color, sprite = Data.effectSprite, lifetime = 8f,
+                };
+                RequestChild(m, at);
+            }
+        }
+
+        // Water: a persistent zone rising from the floor (height = the arena's accumulated water level);
+        // standing in it deals damage. The single zone bullet lives for the whole round (see BulletSystem).
+        private bool TickWater(float dt, BulletSystem sys)
+        {
+            Rect b = sys.ArenaBounds;
+            float level = Mathf.Clamp01(sys.WaterLevel01);
+            float h = b.height * level;
+            if (h <= 0.001f)
+            {
+                CurrentDamage = 0;
+                if (_sr != null) _sr.enabled = false;
+                return Age < Data.lifetime;
+            }
+            float halfH = h * 0.5f;
+            transform.position = new Vector2(b.center.x, b.yMin + halfH);
+            transform.rotation = Quaternion.identity;
+            Data.boxHalfExtents = new Vector2(b.width * 0.5f, halfH);   // grows with the level (Overlaps reads this)
+            CurrentDamage = Data.damage;
+            ApplyBoxVisual(0.5f);                                       // translucent water fill
+            return Age < Data.lifetime;
+        }
+
+        // Does the local dodge icon overlap a circle of the given radius at this bullet's position?
+        private bool HitsLocalIcon(BulletSystem sys, float radius)
+        {
+            var ic = sys.LocalIcon;
+            if (ic == null || ic.IsDead) return false;
+            float rr = Mathf.Max(0.01f, radius) + ic.Radius;
+            return ((Vector2)transform.position - (Vector2)ic.transform.position).sqrMagnitude <= rr * rr;
+        }
+
+        // ---- Horus (boss 4) behaviours -------------------------------------
+
+        // A thrown apple under gravity. Apple Chuck: arcs into the box then falls out (culled off-screen).
+        // Explosive Apples: bursts into a shower of upward apples on hitting the floor.
+        private bool TickGravityApple(float dt, BulletSystem sys)
+        {
+            _vel.y -= Data.gravity * dt;
+            transform.position += (Vector3)(_vel * dt);
+            transform.Rotate(0f, 0f, Data.spinSpeedDeg * dt);   // spin/tumble in flight (visual only)
+            CurrentDamage = Data.damage;
+            ApplyVisual(Data.radius);
+
+            Rect b = sys.ArenaBounds;
+            if (Data.burstOnFloor && _vel.y < 0f && transform.position.y <= b.yMin)
+            {
+                BurstApples(sys, b);
+                return false;
+            }
+            if (Age >= Data.lifetime) return false;
+            return !sys.IsCulled(transform.position);   // falls out of the battlefield -> culled
+        }
+
+        // Explosive burst: spawn `burstCount` apples going up with deterministic random x velocities (seeded
+        // per apple so every client bursts identically), which then fall back down and out.
+        private void BurstApples(BulletSystem sys, Rect b)
+        {
+            var rng = new System.Random(Data.randomSeed);
+            int n = Mathf.Max(1, Data.burstCount);
+            float baseX = transform.position.x;
+            for (int i = 0; i < n; i++)
+            {
+                float vx = (float)(rng.NextDouble() * 2.0 - 1.0) * Data.burstSpeedX;
+                float vy = Data.burstUpSpeed + (float)(rng.NextDouble() * 2.0 - 1.0) * Data.burstUpVariance;
+                float tumble = ((float)rng.NextDouble() * 480f + 240f) * (rng.Next(2) == 0 ? -1f : 1f);
+                var a = new BulletSpawnData
+                {
+                    behavior = BulletBehavior.GravityApple, hitShape = BulletHitShape.Circle,
+                    damage = Data.damage, visualSize = 1f,
+                    radius = Data.burstRadius > 0f ? Data.burstRadius : Data.radius,
+                    gravity = Data.gravity, velocity = new Vector2(vx, Mathf.Max(0.5f, vy)),
+                    spinSpeedDeg = tumble,
+                    color = Data.color, sprite = Data.effectSprite,   // burst -> the "regular" apple sprite
+                    maskInside = Data.maskInside, lifetime = 8f, burstOnFloor = false,
+                };
+                RequestChild(a, new Vector2(baseX, b.yMin + 0.05f));
+            }
+        }
+
+        // Joint Horse Rider controller: switches the arena into ride mode (players jump their horses over
+        // scrolling obstacles) for its whole life, then restores normal free movement.
+        private bool TickHorseRide(float dt, BulletSystem sys)
+        {
+            CurrentDamage = 0;
+            sys.SetRideMode(true, Data.rideGravity, Data.rideJumpVelocity, Data.rideMaxJumpHold, Data.rideLowGravityFactor, Data.sprite, Data.rideArenaExtraHeight, Data.rideSpeedMul);
+            if (Age >= Data.lifetime) { sys.SetRideMode(false, 0f, 0f, 0f, 0f, null, 0f, 1f); return false; }
+            return true;
         }
 
         // ---- Ryomi hitbox + slash visuals ----------------------------------

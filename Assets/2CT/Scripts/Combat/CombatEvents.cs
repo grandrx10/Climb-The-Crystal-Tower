@@ -15,7 +15,7 @@ namespace TwoCT.Combat
         public static event Action<int, int, Vector3> DamageNumber;   // slot, amount, worldPos
         public static event Action<int, string, Vector3> CardVfx;     // casterSlot, vfxKey, worldPos
         public static event Action<int, int> BossHealthChanged;       // current, max
-        public static event Action<string, float> BossSay;            // text, seconds (0 = manual)
+        public static event Action<string, float> BossSay;            // text, seconds
         public static event Action<string> Toast;                     // transient message ("Deck is empty")
         public static event Action<string[]> HandUpdated;              // local player's hand card ids
         public static event Action<int, float> DefendStarted;          // defendRound, duration (client sim cue)

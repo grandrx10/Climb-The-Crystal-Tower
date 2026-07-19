@@ -26,10 +26,15 @@ MonoBehaviour:
         sprite: {fileID: 0}
         lassoSpeed: 1
         lassoRange: 1.5
+        lassoRopeWidth: 0.3
+        ropeSprite: {fileID: 0}
+        ropeColor: {r: 0.6, g: 0.45, b: 0.3, a: 1}
         tracking:
           startTime: 0
           duration: 12
-          sprite: {fileID: 0}
+          sprite: {fileID: -6142374563283994760, guid: bd2ea0f67cb037449b319f423f699e22, type: 3}
+          crosshairSprite: {fileID: -6142374563283994760, guid: bd2ea0f67cb037449b319f423f699e22, type: 3}
+          windupSprite: {fileID: -9097281665673729154, guid: f8468e9a1ee043947b3d09e7e265e3cb, type: 3}
           fillDuration: 3
           fillSpeedup: 0.1
           fillFloor: 0.4

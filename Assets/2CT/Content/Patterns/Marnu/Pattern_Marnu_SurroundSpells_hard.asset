@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06886d9e18510ee4c81a292079c26cb3, type: 3}
+  m_Name: Pattern_Marnu_SurroundSpells_hard
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BulletPatternSO
+  duration: 14
+  emitters:
+  - rid: 7301862606315454674
+  references:
+    version: 2
+    RefIds:
+    - rid: 7301862606315454674
+      type: {class: SurroundSpellsEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
+      data:
+        startTime: 0
+        duration: 14
+        sprite: {fileID: 0}
+        spellBook: {fileID: 11400000, guid: 77d0354b3a1342b2a9d2c8c7814850da, type: 2}
+        spellCount: 10
+        detonateInterval: 1.25
+        ringMargin: 0.8
+        orbitDegPerSec: 30

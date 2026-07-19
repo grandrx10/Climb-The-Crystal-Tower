@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1378895eb1447bc9548affc0533b36f, type: 3}
+  m_Name: SpellBook_Marnu
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.MarnuSpellBookSO
+  spells:
+    useFirebomb: 1
+    useLightning: 1
+    useWater: 1
+    useEarth: 1
+    useWind: 1
+    useMana: 1
+    pageWidth: 0.7
+    pageDamage: 8
+    pageSpin: 200
+    pageDetonateTime: 0.3
+    pageSprite: {fileID: 5012091224111249662, guid: ca2241e4f9b938f40a7f52c4ee65696f, type: 3}
+    firebombColor: {r: 1, g: 0.3, b: 0.2, a: 1}
+    firebombSprite: {fileID: 5353841184698615464, guid: b28284159f39eba44bc135d48e43dd6a, type: 3}
+    fbExplosionSprite: {fileID: -5243772346084840235, guid: 12fe662a9a6c95d4abd51199a73decac, type: 3}
+    fbTrailInterval: 0.05
+    fbSpinDeg: 360
+    fbProjSpeed: 4
+    fbProjRadius: 0.2
+    fbExplosionRadius: 1.5
+    fbExplosionExpand: 0.25
+    fbExplosionLifetime: 0.8
+    fbExplosionDamage: 10
+    lightningColor: {r: 1, g: 0.9, b: 0.25, a: 1}
+    lightningSprite: {fileID: -2983090718515566234, guid: f18e48850fb60b14ca95d1f78d496ebe, type: 3}
+    ltWarning: 1
+    ltStrikeRadius: 0.7
+    ltStrikeDuration: 0.3
+    ltFadeSeconds: 0.25
+    ltStrikeHeightMul: 5
+    ltDamage: 10
+    waterColor: {r: 0.3, g: 0.6, b: 1, a: 1}
+    waterSprite: {fileID: 0}
+    wtRise: 0.1
+    wtRiseSeconds: 0.5
+    wtMax: 0.5
+    wtDamage: 6
+    earthColor: {r: 0.55, g: 0.4, b: 0.25, a: 1}
+    earthSprite: {fileID: 6423806749927177598, guid: 40b3c6f2aa698c549843230719f974f5, type: 3}
+    earthHalfExtents: {x: 0.4, y: 1.6}
+    eaRiseSpeed: 3
+    eaDamage: 10
+    windColor: {r: 1, g: 1, b: 1, a: 1}
+    windSprite: {fileID: 0}
+    wiStrength: 1.5
+    wiDuration: 3
+    wiStreakInterval: 0.2
+    manaColor: {r: 0.7, g: 0.4, b: 1, a: 1}
+    manaSprite: {fileID: 2784468965456250579, guid: c42dfd48f64664646ae12fb369a6ac43, type: 3}
+    mnCount: 5
+    mnStep: 15
+    mnProjSpeed: 5
+    manaHalfExtents: {x: 0.4, y: 0.1}
+    mnDamage: 6

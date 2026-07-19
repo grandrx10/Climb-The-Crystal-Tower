@@ -24,11 +24,11 @@ MonoBehaviour:
   effects:
   - rid: 7301862606315454598
   vfxKey: Focus
-  overrideText: 
+  cardText: 
   references:
     version: 2
     RefIds:
     - rid: 7301862606315454598
       type: {class: GainManaPerTurnEffect, ns: TwoCT.Data, asm: Assembly-CSharp}
       data:
-        amount: 5
+        amount: 3

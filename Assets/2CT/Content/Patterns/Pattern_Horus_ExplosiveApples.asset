@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06886d9e18510ee4c81a292079c26cb3, type: 3}
+  m_Name: Pattern_Horus_ExplosiveApples
+  m_EditorClassIdentifier: Assembly-CSharp::TwoCT.Data.BulletPatternSO
+  duration: 12
+  emitters:
+  - rid: 7301862606315454709
+  references:
+    version: 2
+    RefIds:
+    - rid: 7301862606315454709
+      type: {class: ExplosiveApplesEmitter, ns: TwoCT.Data, asm: Assembly-CSharp}
+      data:
+        startTime: 0
+        duration: 12
+        sprite: {fileID: 0}
+        interval: 1.5
+        intervalDecrease: 0
+        intervalFloor: 0.3
+        gravity: 16
+        flightTime: 1
+        damage: 6
+        radius: 0.4
+        color: {r: 1, g: 0.5, b: 0.1, a: 1}
+        explosiveSprite: {fileID: 5899847947390980637, guid: 88b2f19d03adc67469a54d99ee64c0d9, type: 3}
+        bombSpinDeg: 360
+        burstCount: 3
+        burstUpSpeed: 8
+        burstUpVariance: 4
+        burstSpeedX: 4
+        burstAppleRadius: 0.4
+        regularSprite: {fileID: 9064785310743954872, guid: b07d09adeb415974abcd1ad65f166c51, type: 3}

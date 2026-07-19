@@ -187,15 +187,9 @@ namespace TwoCT.Combat
 
         private IEnumerator RunCombat()
         {
-            // ---- Intro: boss speaks, then attacks -----------------------------
+            // ---- Intro: boss speaks (auto-advancing), then attacks -----------
             SetPhase(CombatPhase.Intro);
-            var intro = boss.IntroLines;
-            if (intro != null)
-                foreach (var line in intro)
-                {
-                    boss.SayClientRpc(line.text, line.autoAdvanceSeconds);
-                    yield return new WaitForSeconds(Mathf.Max(0.1f, line.autoAdvanceSeconds));
-                }
+            yield return PlayBossLines(boss.IntroLines);
 
             // ---- Alternating rounds: attack first, then defend ---------------
             int defendRound = 0;
@@ -208,6 +202,19 @@ namespace TwoCT.Combat
                 CurrentDefendRound = defendRound;
                 yield return RunDefendPhase(defendRound);
                 if (AllPlayersDown()) { Finish(false); yield break; }
+            }
+        }
+
+        /// <summary>Play boss lines, each auto-advancing after its <c>autoAdvanceSeconds</c> (the boss
+        /// speech bubble is a one-way cutscene; free-roam dialogue is the manual, press-to-advance one).</summary>
+        private IEnumerator PlayBossLines(System.Collections.Generic.IReadOnlyList<DialogueLine> lines)
+        {
+            if (lines == null) yield break;
+            foreach (var line in lines)
+            {
+                if (line == null) continue;
+                boss.SayClientRpc(line.text, line.autoAdvanceSeconds);
+                yield return new WaitForSeconds(Mathf.Max(0.1f, line.autoAdvanceSeconds));
             }
         }
 
@@ -286,13 +293,7 @@ namespace TwoCT.Combat
             // boss keep talking through the dialogue box.
             SetPhase(CombatPhase.Intro);
 
-            var lastWords = boss.DefeatLines;
-            if (lastWords != null)
-                foreach (var line in lastWords)
-                {
-                    boss.SayClientRpc(line.text, line.autoAdvanceSeconds);
-                    yield return new WaitForSeconds(Mathf.Max(0.1f, line.autoAdvanceSeconds));
-                }
+            yield return PlayBossLines(boss.DefeatLines);   // last words (auto-advance)
 
             // Boss dissolves away.
             boss.FadeOutClientRpc(bossFadeDuration);

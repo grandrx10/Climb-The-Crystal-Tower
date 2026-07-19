@@ -39,6 +39,46 @@ namespace TwoCT.Core
         TrackingCut,
         /// <summary>Lasso: an invisible controller that drags the defend arena up and down for the round.</summary>
         Lasso,
+
+        // ---- Marnu (boss 3) ------------------------------------------------
+        /// <summary>A "spell page" (2:1 rectangle): flies out rotating, then does a 0.3s squash/stretch+fade
+        /// detonation and reveals its <see cref="BulletSpawnData.spell"/> effect (spawned as child bullet(s)).</summary>
+        SpellPage,
+        /// <summary>Firebomb: a projectile aimed at a player that bursts into an expanding Explosion on
+        /// hitting a player or the arena edge.</summary>
+        Firebomb,
+        /// <summary>Lightning: a warning circle fades in at a spot, then a bolt strikes for damage in a radius
+        /// (the tall bolt sprite extends up above the strike area; the hit is only the bottom radius).</summary>
+        Lightning,
+        /// <summary>Earth pillar: a tall rock rectangle rises from the arena floor to the ceiling, then sinks
+        /// back down and despawns.</summary>
+        EarthPillar,
+        /// <summary>Wind: an invisible controller that blows a horizontal force on the player icons (and streaks)
+        /// for its lifetime, then clears the force.</summary>
+        Wind,
+        /// <summary>Water: a persistent zone rising from the arena floor (its height = the arena's accumulated
+        /// water level); standing in it deals damage. Raised 10% per Water cast, capped at 50%.</summary>
+        Water,
+
+        // ---- Horus (boss 4) ------------------------------------------------
+        /// <summary>Horus's apple: launched in a gravity arc; falls out of the battlefield (Apple Chuck), or
+        /// bursts into a shower of upward apples on hitting the floor (Explosive Apples).</summary>
+        GravityApple,
+        /// <summary>Horus's Joint Horse Rider: an invisible controller that switches the defend arena into
+        /// "ride mode" (players jump their horses over scrolling obstacles) for its lifetime.</summary>
+        HorseRide,
+    }
+
+    /// <summary>The six spells a Marnu spell page can cast when it detonates. Each tints the page a unique
+    /// colour (see <see cref="TwoCT.Bullets.Bullet"/>/emitters).</summary>
+    public enum SpellType
+    {
+        Firebomb = 0,   // red
+        Lightning,      // yellow
+        Water,          // blue
+        Earth,          // brown
+        Wind,           // white
+        Mana,           // purple
     }
 
     /// <summary>Collision shape a bullet hit-tests against the dodge icon.</summary>
@@ -134,10 +174,85 @@ namespace TwoCT.Core
         public float windupDuration;      // TrackingCut: pause (frozen + white) before each detonation
 
         // Sliding Cut / Lasso ------------------------------------------------
-        public float afterImageInterval;  // seconds between afterimage drops (SlidingCut / Ricochet trail)
+        public float afterImageInterval;  // seconds between afterimage drops (SlidingCut trail)
+        public bool flipXOnSpawn;         // mirror the sprite horizontally at spawn (e.g. a left-facing sprite)
+        public bool flipYOnSpawn;         // mirror the sprite vertically at spawn
         public float lassoSpeed;          // arena drag speed (units/sec)
         public float lassoRange;          // how far up/down the arena drags from centre
         public float lassoRopeWidth;      // width of the visible lasso ropes (0 = invisible)
+
+        // ---- Marnu (boss 3): spell pages + spells --------------------------
+        public SpellType spell;           // which spell a SpellPage casts on detonation
+        public Sprite effectSprite;       // art for the revealed effect (bolt/pillar/firebomb/mana shot); null = placeholder
+
+        // Page delivery -----------------------------------------------------
+        public float pageMoveTime;        // seconds flying from the spawn point to stagePoint
+        public float pageHoldTime;        // seconds held at stagePoint before it launches / detonates
+        public float pageDetonateTime;    // seconds of the squash/stretch+fade detonation (design: 0.3)
+        public bool  pageLaunches;        // after the hold, launch as a projectile (Targeted/Sea) vs detonate in place (Crazy/Surround)
+        public bool  pageAimAtPlayer;     // a launched page flies at the targetSelect player (else it uses `velocity`)
+        public float pageLaunchSpeed;     // speed of a launched page (kept separate from the spell's own projSpeed)
+        public int   pageDamage;          // contact damage of the page itself (its rotating box hitbox), separate from the revealed spell
+
+        // Firebomb / projectile ---------------------------------------------
+        public float projSpeed;           // speed of the spawned projectile(s)
+
+        // Lightning ----------------------------------------------------------
+        public float warningDuration;     // warning indicator fades in (opacity 0.25 -> 1) over this
+        public float strikeRadius;        // damage radius at the strike point (bottom of the bolt)
+        public float strikeDuration;      // how long the bolt is shown / deals damage after the warning
+        public float strikeHeightMul;     // bolt height as a multiple of the strike diameter (visual reach up)
+
+        // Water --------------------------------------------------------------
+        public float waterRise;           // fraction of the battlefield raised per cast (design: 0.1)
+        public float waterMax;            // cap as a fraction of total height (design: 0.5)
+        public float waterRiseSeconds;    // seconds the water takes to reach its new level (0 = instant)
+
+        // Earth pillar / Mana shot box --------------------------------------
+        public Vector2 effectHalfExtents; // box half-size of the spawned effect (Earth pillar, Mana shot)
+        public float riseSpeed;           // Earth pillar rise/sink speed
+
+        // Lightning strike point (independent of the page's own position) ----
+        public Vector2 effectPoint;       // world point a spell strikes (Lightning x,y / Earth x); zero = clamp the page position
+        public float effectSpinDeg;       // spin of the spawned effect projectile (Firebomb), deg/sec
+
+        // Spell-page orbit (Surround Spells: the ring circles the battlefield centre) ----
+        public Vector2 orbitCenter;       // world centre the page orbits
+        public Vector2 orbitRadii;        // oval radii (x, y) of the orbit
+        public float orbitStartDeg;       // angle on the oval at spawn
+        public float orbitDegPerSec;      // orbit speed (0 = no orbit, page just holds its stage point)
+
+        // Wind ---------------------------------------------------------------
+        public float windStrength;        // horizontal force applied to player icons (units/sec)
+        public float windDir;             // +1 = blow right, -1 = blow left
+        public float windDuration;        // seconds the wind blows
+        public float windStreakInterval;  // seconds between the drifting wind-streak visuals (0 = none)
+
+        // Mana fan -----------------------------------------------------------
+        public int   manaCount;           // projectiles in the fan (design: 5)
+        public float manaSpreadStepDeg;   // angle step between fan projectiles (design: 15)
+
+        // ---- Horus (boss 4): apples + horse ride ---------------------------
+        public float gravity;             // downward accel for a GravityApple (units/sec^2)
+        public bool  burstOnFloor;        // Explosive apple: burst into upward apples on hitting the floor
+        public int   burstCount;          // apples spawned by the burst
+        public float burstUpSpeed;        // upward launch speed of the burst apples
+        public float burstSpeedX;         // max |random horizontal| speed of the burst apples
+        public float burstUpVariance;     // ± random vertical speed added per burst apple
+        public float burstRadius;         // radius of the burst apples (0 = inherit the bomb's radius)
+        public float wobbleDeg;           // walk-wobble tilt amplitude for Linear movers (Horse Race horses)
+        public float wobbleFreq;          // wobble frequency (rad/sec; FreeRoamPlayer uses 12)
+        public int   randomSeed;          // deterministic seed for runtime randomness (burst velocities)
+        public bool  maskInside;          // render only inside the arena mask (Horse Race / obstacles "come into frame")
+        public bool  maskOutside;         // render only OUTSIDE the arena mask (Marnu wind streaks: the box stays clear)
+
+        // Horse ride controller ---------------------------------------------
+        public float rideGravity;         // gravity pulling the ridden icons down
+        public float rideJumpVelocity;    // initial upward velocity of a jump (press W)
+        public float rideMaxJumpHold;     // how long holding W keeps the jump floaty (variable jump height)
+        public float rideLowGravityFactor;// gravity multiplier while a held jump is still rising (<1 = higher jumps)
+        public float rideArenaExtraHeight;// extra box height during the ride (raised ceiling, floor stays put)
+        public float rideSpeedMul;        // horizontal steer speed multiplier while riding (0 = 1×)
     }
 
     /// <summary>

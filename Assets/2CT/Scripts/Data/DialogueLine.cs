@@ -5,8 +5,8 @@ using UnityEngine;
 namespace TwoCT.Data
 {
     /// <summary>
-    /// One line of dialogue. Used by boss combat intros (auto-advancing after
-    /// <see cref="autoAdvanceSeconds"/>) and, later, by free-roam dialogue trees.
+    /// One line of dialogue. Boss combat lines (intro/defeat/transition) auto-advance after
+    /// <see cref="autoAdvanceSeconds"/>; free-roam dialogue ignores it (advances on a press).
     /// </summary>
     [Serializable]
     public class DialogueLine
@@ -14,7 +14,7 @@ namespace TwoCT.Data
         public string speaker = "";
         [TextArea(2, 5)] public string text = "";
 
-        [Tooltip("Boss/cutscene lines auto-advance after this many seconds. 0 = wait for a skip press.")]
+        [Tooltip("Boss/cutscene lines auto-advance after this many seconds. (Free-roam dialogue advances on a press and ignores this.)")]
         public float autoAdvanceSeconds = 2.5f;
 
         [SerializeReference]
